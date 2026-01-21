@@ -2188,3 +2188,182 @@ public void onCreate(Bundle savedInstanceState) {
 ---
 
 *Last updated: 2026-01-20*
+
+---
+
+## 2026-01-21: Sound Effects & Feature Testing
+
+### Overview
+
+Added sound effect files for check-in and milestone feedback, tested the Family Dashboard end-to-end, and fixed a date calculation bug.
+
+---
+
+### Feature 1: Sound Effect Files
+
+**Problem:** The sound system was implemented but audio files were missing from `client/public/sounds/`.
+
+**Solution:** Created a Node.js script to generate WAV audio files using Web Audio API synthesis.
+
+#### Files Created:
+
+**`client/scripts/generate-sounds.js`**
+- Generates WAV files programmatically
+- Uses sine wave synthesis with envelope shaping
+- No external dependencies required
+
+**`client/public/sounds/checkin.wav`** (39KB)
+- Two-note ascending chime (C5 → E5)
+- Gentle, pleasant confirmation sound
+- 0.4 second duration with decay envelope
+
+**`client/public/sounds/milestone.wav`** (70KB)
+- Four-note ascending arpeggio (C5 → E5 → G5 → C6)
+- Celebratory achievement sound
+- 0.8 second duration with staggered notes
+
+#### Files Modified:
+
+**`client/src/utils/sounds.js`**
+- Changed file extensions from `.mp3` to `.wav`
+- Updated both preload paths and fallback paths
+
+```javascript
+// Before
+loadSound('checkin', '/sounds/checkin.mp3')
+
+// After
+loadSound('checkin', '/sounds/checkin.wav')
+```
+
+#### Sound Generation Details:
+
+```javascript
+// WAV file structure
+- 44-byte header (RIFF/WAVE format)
+- 16-bit PCM audio data
+- 44100 Hz sample rate
+- Mono channel
+
+// Synthesis approach
+- Sine wave oscillator
+- Exponential decay envelope
+- Multiple notes mixed with offset timing
+```
+
+---
+
+### Feature 2: Family Dashboard Testing
+
+Verified the Family Dashboard feature works end-to-end:
+
+#### Test Results:
+
+| Test | Result |
+|------|--------|
+| Create share link | ✅ Pass |
+| Copy link to clipboard | ✅ Pass |
+| Dashboard loads with token | ✅ Pass |
+| Shows user name | ✅ Pass |
+| Shows "Checked In" status | ✅ Pass |
+| Shows relative time ("6 minutes ago") | ✅ Pass |
+| Shows current streak | ✅ Pass |
+| Shows 7-day history | ✅ Pass |
+| Read-only notice displayed | ✅ Pass |
+
+#### Dashboard URL Format:
+```
+http://localhost:3001/family/{64-char-hex-token}
+```
+
+---
+
+### Bug Fix: Date Calculation in Share Links
+
+**Problem:** Share link creation date showed "-1 days ago" instead of "Today".
+
+**Root Cause:** SQLite stores dates as `YYYY-MM-DD HH:MM:SS` without timezone indicator. JavaScript's `new Date()` parsed this ambiguously, and timezone differences caused negative day calculations.
+
+**File Modified:** `client/src/components/Settings/ShareLinkManager.jsx`
+
+**Fix Applied:**
+
+```javascript
+// Before
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  // ... could produce negative diffDays
+};
+
+// After
+const formatRelativeTime = (dateString) => {
+  if (!dateString) return null;
+
+  // Handle SQLite datetime format by converting to ISO 8601
+  const normalizedDate = dateString.includes('T')
+    ? dateString
+    : dateString.replace(' ', 'T') + 'Z';
+
+  const date = new Date(normalizedDate);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays < 0) return 'Just now'; // Handle timezone edge cases
+  if (diffDays === 0) return 'Today';
+  // ...
+};
+```
+
+**Key Changes:**
+1. Convert SQLite format (`2026-01-21 16:06:25`) to ISO 8601 (`2026-01-21T16:06:25Z`)
+2. Handle negative `diffDays` gracefully by showing "Just now"
+
+---
+
+### Sound Playback Testing
+
+Verified sound playback works correctly:
+
+| Test | Result |
+|------|--------|
+| Sound files fetch (200 OK) | ✅ Pass |
+| checkin.wav loads (39734 bytes) | ✅ Pass |
+| milestone.wav loads (70604 bytes) | ✅ Pass |
+| Audio playback (Web Audio API) | ✅ Pass |
+| Settings toggle persists | ✅ Pass |
+
+---
+
+### Files Summary
+
+#### New Files:
+| File | Purpose |
+|------|---------|
+| `client/scripts/generate-sounds.js` | WAV file generator script |
+| `client/public/sounds/checkin.wav` | Check-in success sound |
+| `client/public/sounds/milestone.wav` | Milestone achievement sound |
+
+#### Modified Files:
+| File | Changes |
+|------|---------|
+| `client/src/utils/sounds.js` | Changed extensions to .wav |
+| `client/src/components/Settings/ShareLinkManager.jsx` | Fixed date calculation bug |
+
+---
+
+### Verification Checklist
+
+- [x] Sound files created and placed in public/sounds/
+- [x] sounds.js updated to use .wav extension
+- [x] Sound toggle in Settings enables/disables playback
+- [x] Check-in sound plays on successful check-in
+- [x] Milestone sound plays on streak milestones
+- [x] Family Dashboard creates share links
+- [x] Family Dashboard displays correct status
+- [x] Date calculation shows "Today" instead of "-1 days ago"
+
+---
+
+*Last updated: 2026-01-21*
