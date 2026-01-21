@@ -2366,4 +2366,93 @@ Verified sound playback works correctly:
 
 ---
 
+### Lessons Learned
+
+#### 1. WAV Files Are Easier to Generate Than MP3
+
+When needing simple UI sounds, generating WAV files programmatically is straightforward:
+- WAV is uncompressed PCM data with a simple 44-byte header
+- No encoding libraries needed - just math and buffer manipulation
+- Modern browsers support WAV playback natively
+- MP3 requires complex encoding (FFT, psychoacoustic modeling, Huffman coding)
+
+**Takeaway:** For simple synthesized sounds, WAV is the path of least resistance.
+
+#### 2. SQLite Datetime Format is Ambiguous
+
+SQLite's `datetime('now')` produces `YYYY-MM-DD HH:MM:SS` format without:
+- The `T` separator between date and time
+- Timezone indicator (`Z` for UTC or `+00:00`)
+
+JavaScript's `new Date()` parses this inconsistently across browsers/environments. Some treat it as local time, others as UTC.
+
+**Fix Pattern:**
+```javascript
+const normalizedDate = dateString.includes('T')
+  ? dateString
+  : dateString.replace(' ', 'T') + 'Z';
+```
+
+**Takeaway:** Always normalize date strings to ISO 8601 before parsing with `new Date()`.
+
+#### 3. Browser DevTools MCP for E2E Testing
+
+Used Chrome DevTools MCP to test features without manual interaction:
+- `take_snapshot` - Get accessibility tree of current page
+- `click` - Interact with elements by UID
+- `evaluate_script` - Run arbitrary JS (check localStorage, make API calls, play audio)
+- `new_page` - Open URLs in new tabs
+
+**Useful for:**
+- Verifying UI state changes after actions
+- Testing features that require user interaction
+- Checking localStorage/API responses programmatically
+
+#### 4. Timezone Edge Cases in Relative Time
+
+When calculating "X days ago", always handle edge cases:
+- Negative diff (date appears in future due to timezone)
+- Same-day but different UTC day
+- Daylight saving time transitions
+
+**Defensive Pattern:**
+```javascript
+if (diffDays < 0) return 'Just now';
+if (diffDays === 0) return 'Today';
+if (diffDays === 1) return 'Yesterday';
+```
+
+#### 5. Audio Synthesis Basics
+
+Creating pleasant UI sounds requires understanding:
+- **Frequency:** Musical notes map to Hz (C5 = 523.25 Hz, E5 = 659.25 Hz)
+- **Envelope:** Attack-decay shapes make sounds feel natural
+- **Mixing:** Multiple notes with slight delays create chords/arpeggios
+- **Volume:** UI sounds should be subtle (0.3-0.5 volume)
+
+**Check-in sound formula:**
+```javascript
+// Two-note chord: C5 + E5 (major third interval)
+// Second note delayed 50ms for "ascending" feel
+// Exponential decay envelope for natural fade
+```
+
+---
+
+### Session Summary
+
+**What we did:**
+1. Created sound effect files using programmatic WAV generation
+2. Tested Family Dashboard feature end-to-end
+3. Fixed date calculation bug in share link display
+4. Verified all features working correctly
+
+**Time spent:** ~1 hour
+
+**Commits:**
+- `7849500` - Add Family Dashboard, sound effects, and widget infrastructure
+- `734e829` - Update devlog with sound effects and testing notes
+
+---
+
 *Last updated: 2026-01-21*
