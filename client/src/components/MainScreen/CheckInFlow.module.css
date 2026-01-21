@@ -1,0 +1,250 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: backdropFade 0.2s ease-out;
+  padding: var(--spacing-md);
+}
+
+@keyframes backdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--bg-mid);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: var(--content-max-width);
+  padding: var(--spacing-xl);
+  animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+  position: relative;
+}
+
+.checkmark {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--spacing-md);
+  color: var(--bg-dark);
+  animation: popIn 0.4s ease-out, pulse 2s ease-in-out 0.4s infinite;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(74, 222, 128, 0);
+  }
+}
+
+/* Success ripple effect behind checkmark */
+.checkmark::before {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  animation: successRipple 1s ease-out;
+  opacity: 0;
+  z-index: -1;
+}
+
+@keyframes successRipple {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.backButton {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400);
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  color: var(--white);
+  background: var(--bg-light);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--white);
+  margin: 0 0 var(--spacing-xs);
+}
+
+.subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  margin: 0;
+}
+
+.moodGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+}
+
+.moodButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  background: var(--bg-dark);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.moodButton:hover {
+  border-color: var(--mood-color, var(--gray-600));
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.moodButton:hover .moodFace {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.moodButton.selected {
+  border-color: var(--mood-color, var(--green-primary));
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.moodButton.selected .moodFace {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px var(--mood-color));
+  animation: faceWiggle 0.5s ease-out;
+}
+
+.moodFace {
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes faceWiggle {
+  0% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.2) rotate(-8deg); }
+  50% { transform: scale(1.15) rotate(5deg); }
+  75% { transform: scale(1.18) rotate(-3deg); }
+  100% { transform: scale(1.15) rotate(0deg); }
+}
+
+.moodLabel {
+  font-size: var(--font-size-xs);
+  color: var(--gray-400);
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+
+.moodButton:hover .moodLabel {
+  color: var(--mood-color);
+}
+
+.moodButton.selected .moodLabel {
+  color: var(--mood-color, var(--green-primary));
+}
+
+.noteContainer {
+  position: relative;
+  margin-bottom: var(--spacing-xl);
+}
+
+.noteInput {
+  width: 100%;
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  resize: none;
+  transition: border-color var(--transition-fast);
+}
+
+.noteInput:focus {
+  outline: none;
+  border-color: var(--green-primary);
+}
+
+.noteInput::placeholder {
+  color: var(--gray-500);
+}
+
+.charCount {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  right: var(--spacing-md);
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}

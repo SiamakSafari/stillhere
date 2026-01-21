@@ -1,0 +1,112 @@
+.section {
+  background: var(--bg-mid);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--accent-primary, var(--green-primary));
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.sectionDescription {
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+/* Badge preview */
+.badgePreview {
+  background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a14 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.badgePreview::before {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 30px var(--accent-glow, rgba(74, 222, 128, 0.3)),
+              inset 0 0 30px var(--accent-glow, rgba(74, 222, 128, 0.1));
+}
+
+.badgeInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  z-index: 1;
+}
+
+.badgeApp {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--accent-primary, var(--green-primary));
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px var(--accent-glow, rgba(74, 222, 128, 0.5));
+}
+
+.badgeCheck {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent-primary, var(--green-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px var(--accent-glow, rgba(74, 222, 128, 0.5));
+  margin: var(--spacing-sm) 0;
+}
+
+.badgeCheck svg {
+  color: var(--bg-dark);
+}
+
+.badgeLabel {
+  font-size: var(--font-size-xs);
+  color: var(--gray-400);
+}
+
+.badgeDate {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--white);
+}
+
+.badgeStreak {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+}
+
+/* Buttons */
+.buttonRow {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.buttonRow button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}

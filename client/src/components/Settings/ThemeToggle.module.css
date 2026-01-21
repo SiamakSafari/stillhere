@@ -1,0 +1,62 @@
+.container {
+  display: flex;
+  gap: var(--spacing-sm);
+  background: var(--bg-dark);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-700);
+}
+
+.option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  color: var(--gray-400);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.option:hover {
+  color: var(--gray-200);
+  background: var(--bg-light);
+}
+
+.option.active {
+  background: var(--green-darker);
+  color: var(--green-primary);
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.15);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.option.active .icon {
+  filter: drop-shadow(0 0 6px var(--green-primary));
+}
+
+.option.active .icon svg {
+  stroke: var(--green-primary);
+  fill: var(--green-primary);
+}
+
+.label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--green-primary);
+}

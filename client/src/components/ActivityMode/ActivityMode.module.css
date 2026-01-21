@@ -1,0 +1,559 @@
+/* Start Activity Button */
+.startButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 2px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  width: 100%;
+  max-width: var(--card-max-width);
+  margin: 0 auto;
+  box-shadow: var(--glass-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.startButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.startButton:hover {
+  border-color: var(--accent-primary, var(--green-primary));
+  background: rgba(74, 222, 128, 0.08);
+  transform: translateY(-3px);
+  box-shadow: var(--glass-shadow), 0 0 30px var(--accent-glow);
+}
+
+.startButton:hover::before {
+  left: 100%;
+}
+
+.startIcon {
+  font-size: 2rem;
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.startText {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--white);
+}
+
+.startHint {
+  font-size: var(--font-size-xs);
+  color: var(--gray-400);
+}
+
+/* Activity Selector */
+.selector {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  box-shadow: var(--glass-shadow);
+  animation: selectorEnter 0.4s ease-out;
+}
+
+@keyframes selectorEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.selectorTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+  background: linear-gradient(135deg, var(--white) 0%, var(--accent-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Activity Grid */
+.activityGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.activityButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--spacing-md) var(--spacing-sm);
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-bounce);
+  position: relative;
+  overflow: hidden;
+}
+
+.activityButton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, var(--accent-glow), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.activityButton:hover {
+  border-color: var(--gray-500);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.activityButtonSelected {
+  border-color: var(--accent-primary, var(--green-primary));
+  background: rgba(74, 222, 128, 0.12);
+  box-shadow: 0 0 20px var(--accent-glow, rgba(74, 222, 128, 0.3)),
+    inset 0 0 30px rgba(74, 222, 128, 0.05);
+  transform: scale(1.02);
+}
+
+.activityButtonSelected::after {
+  opacity: 0.1;
+}
+
+.activityEmoji {
+  font-size: 1.75rem;
+  transition: transform var(--transition-bounce);
+}
+
+.activityButtonSelected .activityEmoji {
+  transform: scale(1.15);
+}
+
+.activityIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-bounce);
+  opacity: 0.85;
+}
+
+.activityButton:hover .activityIcon {
+  transform: scale(1.15) rotate(-3deg);
+  opacity: 1;
+}
+
+.activityButtonSelected .activityIcon {
+  transform: scale(1.2);
+  opacity: 1;
+  filter: drop-shadow(0 0 8px var(--activity-color));
+}
+
+.activityLabel {
+  font-size: var(--font-size-xs);
+  color: var(--gray-300);
+  font-weight: 600;
+  transition: color var(--transition-base);
+}
+
+.activityButton:hover .activityLabel {
+  color: var(--activity-color);
+}
+
+.activityButtonSelected .activityLabel {
+  color: var(--activity-color);
+}
+
+/* Custom input */
+.customInput {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-lg);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.customInput:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* Duration Section */
+.durationSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.durationLabel {
+  font-size: var(--font-size-sm);
+  color: var(--gray-300);
+  font-weight: 600;
+}
+
+.durationSelect {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-base);
+}
+
+.durationSelect:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--green-primary));
+}
+
+/* Location Toggle */
+.locationToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--gray-300);
+}
+
+.locationToggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-primary, var(--green-primary));
+}
+
+.locationIcon {
+  font-size: 1rem;
+}
+
+/* Details Section */
+.detailsSection {
+  margin: var(--spacing-md) 0;
+}
+
+.detailsInput {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  color: var(--white);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  resize: none;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.detailsInput:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.detailsInput::placeholder {
+  color: var(--gray-500);
+}
+
+.detailsHint {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  margin-top: 6px;
+}
+
+/* Selector Actions */
+.selectorActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+  margin-top: var(--spacing-lg);
+}
+
+.selectorFooter {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  text-align: center;
+  margin-top: var(--spacing-md);
+}
+
+/* Activity Timer */
+.timer {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 2px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  text-align: center;
+  box-shadow: var(--glass-shadow);
+  animation: timerEnter 0.5s ease-out;
+}
+
+@keyframes timerEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.timerGrace {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  animation: pulseRed 1s infinite;
+}
+
+@keyframes pulseRed {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4), var(--glass-shadow);
+  }
+  50% {
+    box-shadow: 0 0 50px rgba(239, 68, 68, 0.6), var(--glass-shadow);
+  }
+}
+
+.timerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.timerEmoji {
+  font-size: 2rem;
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.timerActivity {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--white);
+}
+
+/* Timer Display */
+.timerDisplay {
+  background: var(--bg-dark);
+  border: 3px solid var(--accent-primary, var(--green-primary));
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.timerDisplay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, var(--accent-glow), transparent 70%);
+  opacity: 0.2;
+}
+
+.timerDisplayGrace {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.timerDisplayGrace::before {
+  background: radial-gradient(circle at center, rgba(239, 68, 68, 0.4), transparent 70%);
+}
+
+.timerTime {
+  display: block;
+  font-size: 3.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-primary, var(--green-primary));
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 30px var(--accent-glow);
+}
+
+.timerDisplayGrace .timerTime {
+  color: #ef4444;
+  text-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+}
+
+.timerLabel {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  margin-top: var(--spacing-sm);
+  position: relative;
+  z-index: 1;
+}
+
+/* Grace Period Warning */
+.graceWarning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(239, 68, 68, 0.25);
+  border: 2px solid rgba(239, 68, 68, 0.6);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #fca5a5;
+  animation: warningPulse 1s infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.graceIcon {
+  font-size: 1.25rem;
+  animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px) rotate(-5deg); }
+  75% { transform: translateX(3px) rotate(5deg); }
+}
+
+/* Safe Button */
+.safeButton {
+  background: linear-gradient(135deg, var(--green-primary), var(--green-dark));
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+  padding: var(--spacing-md) var(--spacing-xl);
+  box-shadow: 0 4px 20px var(--green-glow);
+  animation: safeButtonPulse 2s ease-in-out infinite;
+}
+
+@keyframes safeButtonPulse {
+  0%, 100% {
+    box-shadow: 0 4px 20px var(--green-glow);
+  }
+  50% {
+    box-shadow: 0 4px 40px var(--green-glow);
+  }
+}
+
+/* Timer Actions */
+.timerActions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  margin-top: var(--spacing-lg);
+}
+
+.extendButton,
+.endButton {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: transparent;
+  border: 2px solid var(--gray-600);
+  border-radius: var(--radius-lg);
+  color: var(--gray-300);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.extendButton:hover {
+  border-color: var(--accent-primary, var(--green-primary));
+  color: var(--accent-primary, var(--green-primary));
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.endButton:hover {
+  border-color: var(--gray-400);
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.timerFooter {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  margin-top: var(--spacing-lg);
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+  .activityGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .timerTime {
+    font-size: 2.75rem;
+  }
+
+  .selector,
+  .timer {
+    padding: var(--spacing-lg);
+  }
+}

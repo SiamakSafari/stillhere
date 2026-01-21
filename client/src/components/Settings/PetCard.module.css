@@ -1,0 +1,209 @@
+.section {
+  background: var(--bg-mid);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--accent-primary, var(--green-primary));
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.titleIcon {
+  font-size: 1.2rem;
+}
+
+.sectionDescription {
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+/* Photo section */
+.photoSection {
+  margin-bottom: var(--spacing-md);
+}
+
+.photoPreview {
+  position: relative;
+  display: inline-block;
+}
+
+.petPhoto {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 20px var(--accent-glow, rgba(74, 222, 128, 0.3));
+}
+
+.removePhoto {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--red-error);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.removePhoto:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.uploadButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-full);
+  background: var(--bg-dark);
+  border: 2px dashed var(--gray-600);
+  color: var(--gray-400);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-xs);
+}
+
+.uploadButton:hover {
+  border-color: var(--accent-primary, var(--green-primary));
+  color: var(--accent-primary, var(--green-primary));
+  background: rgba(74, 222, 128, 0.05);
+}
+
+/* Edit form */
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--gray-300);
+  font-weight: 600;
+}
+
+.input {
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 15px var(--accent-glow, rgba(74, 222, 128, 0.2));
+}
+
+.textarea {
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  resize: vertical;
+  min-height: 80px;
+  transition: all var(--transition-fast);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 15px var(--accent-glow, rgba(74, 222, 128, 0.2));
+}
+
+.buttonRow {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+/* Info display */
+.infoDisplay {
+  background: var(--bg-dark);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.infoRow {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--gray-800);
+}
+
+.infoRow:last-of-type {
+  border-bottom: none;
+  margin-bottom: var(--spacing-sm);
+}
+
+.infoLabel {
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  flex-shrink: 0;
+  width: 50px;
+}
+
+.infoValue {
+  font-size: var(--font-size-sm);
+  color: var(--white);
+  flex: 1;
+}
+
+.emptyInfo {
+  font-size: var(--font-size-sm);
+  color: var(--gray-500);
+  font-style: italic;
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Generate section */
+.generateSection {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-700);
+}
+
+.generateSection button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}

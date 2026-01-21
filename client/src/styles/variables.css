@@ -1,0 +1,201 @@
+:root {
+  /* Background colors */
+  --bg-dark: #0a0a0a;
+  --bg-mid: #1a1a2e;
+  --bg-light: #16213e;
+
+  /* Green palette */
+  --green-primary: #4ade80;
+  --green-dark: #22c55e;
+  --green-darker: #16a34a;
+  --green-glow: rgba(74, 222, 128, 0.4);
+
+  /* Blue accent */
+  --blue-accent: #60a5fa;
+  --blue-dark: #3b82f6;
+
+  /* Neutrals */
+  --white: #ffffff;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+
+  /* Status colors */
+  --red-error: #ef4444;
+  --yellow-warning: #fbbf24;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+
+  /* Layout */
+  --content-max-width: 400px;
+  --card-max-width: 100%;
+  --container-padding: var(--spacing-lg);
+  --card-padding: var(--spacing-lg);
+
+  /* Border radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 30px var(--accent-glow, var(--green-glow));
+
+  /* Glassmorphism */
+  --glass-bg: rgba(26, 26, 46, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 12px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  /* Gradients */
+  --gradient-accent: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-dark) 100%);
+  --gradient-glow: radial-gradient(circle at 50% 50%, var(--accent-glow) 0%, transparent 70%);
+  --gradient-text: linear-gradient(135deg, var(--white) 0%, var(--accent-primary) 50%, var(--white) 100%);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+  --transition-bounce: 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Focus styles for accessibility */
+:root {
+  --focus-ring: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--accent-primary, var(--green-primary));
+  --focus-ring-inset: inset 0 0 0 2px var(--accent-primary, var(--green-primary));
+}
+
+/* Global focus-visible styles */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent-primary, var(--green-primary));
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline for buttons with custom styles */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Adjust for elements that already have rounded shapes */
+[class*="Button"]:focus-visible,
+[class*="toggle"]:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* Accent color themes */
+:root[data-accent="green"],
+:root {
+  --accent-primary: #4ade80;
+  --accent-dark: #22c55e;
+  --accent-darker: #16a34a;
+  --accent-glow: rgba(74, 222, 128, 0.4);
+}
+
+:root[data-accent="blue"] {
+  --accent-primary: #60a5fa;
+  --accent-dark: #3b82f6;
+  --accent-darker: #2563eb;
+  --accent-glow: rgba(96, 165, 250, 0.4);
+}
+
+:root[data-accent="purple"] {
+  --accent-primary: #a78bfa;
+  --accent-dark: #8b5cf6;
+  --accent-darker: #7c3aed;
+  --accent-glow: rgba(167, 139, 250, 0.4);
+}
+
+:root[data-accent="orange"] {
+  --accent-primary: #fb923c;
+  --accent-dark: #f97316;
+  --accent-darker: #ea580c;
+  --accent-glow: rgba(251, 146, 60, 0.4);
+}
+
+:root[data-accent="pink"] {
+  --accent-primary: #f472b6;
+  --accent-dark: #ec4899;
+  --accent-darker: #db2777;
+  --accent-glow: rgba(244, 114, 182, 0.4);
+}
+
+/* Light theme */
+:root[data-theme="light"] {
+  /* Background colors - inverted for light mode */
+  --bg-dark: #f8fafc;
+  --bg-mid: #f1f5f9;
+  --bg-light: #e2e8f0;
+
+  /* Green palette - slightly adjusted for light mode */
+  --green-primary: #22c55e;
+  --green-dark: #16a34a;
+  --green-darker: #15803d;
+  --green-glow: rgba(34, 197, 94, 0.3);
+
+  /* Blue accent */
+  --blue-accent: #3b82f6;
+  --blue-dark: #2563eb;
+
+  /* Neutrals - inverted */
+  --white: #0f172a;
+  --gray-100: #1e293b;
+  --gray-200: #334155;
+  --gray-300: #475569;
+  --gray-400: #64748b;
+  --gray-500: #94a3b8;
+  --gray-600: #cbd5e1;
+  --gray-700: #e2e8f0;
+  --gray-800: #f1f5f9;
+
+  /* Status colors - slightly adjusted */
+  --red-error: #dc2626;
+  --yellow-warning: #d97706;
+
+  /* Shadows - lighter for light mode */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 30px var(--green-glow);
+
+  /* Glassmorphism - light mode */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-blur: 12px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}

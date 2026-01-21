@@ -1,0 +1,68 @@
+.quoteContainer {
+  text-align: center;
+  padding: var(--card-padding);
+  max-width: var(--card-max-width);
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
+  animation: quoteEnter 0.6s ease-out;
+  animation-delay: 0.3s;
+  animation-fill-mode: both;
+}
+
+@keyframes quoteEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quoteIcon {
+  color: var(--accent-primary, var(--green-primary));
+  opacity: 0.6;
+  margin-bottom: var(--spacing-sm);
+  animation: quoteIconPulse 3s ease-in-out infinite;
+}
+
+@keyframes quoteIconPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.quote {
+  margin: 0;
+  padding: 0;
+}
+
+.quoteText {
+  font-size: var(--font-size-base);
+  color: var(--gray-200);
+  font-style: italic;
+  line-height: 1.7;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.quoteAuthor {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  font-style: normal;
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--glass-border);
+}

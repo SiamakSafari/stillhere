@@ -1,0 +1,806 @@
+.container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--container-padding);
+  padding-bottom: var(--spacing-xl);
+  background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg-mid) 100%);
+  animation: pageEnter 0.4s ease-out;
+  position: relative;
+  overflow-y: auto;
+}
+
+.contentWrapper {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xl);
+  position: relative;
+  z-index: 1;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.settingsButton,
+.calendarButton {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-400);
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.settingsButton:hover,
+.calendarButton:hover {
+  color: var(--white);
+  background: var(--bg-mid);
+}
+
+.settingsButton:hover svg {
+  animation: gearSpin 0.5s ease-out forwards;
+}
+
+.calendarButton:hover svg {
+  animation: calendarBounce 0.4s ease-in-out;
+}
+
+@keyframes gearSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(90deg); }
+}
+
+@keyframes calendarBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.settingsButton:focus-visible,
+.calendarButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--accent-primary, var(--green-primary));
+  color: var(--white);
+}
+
+/* Greeting styles */
+.greetingContainer {
+  text-align: center;
+  margin-bottom: var(--spacing-lg);
+  animation: fadeSlideIn 0.6s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.greeting {
+  font-size: var(--font-size-2xl);
+  font-weight: 400;
+  color: var(--gray-300);
+  letter-spacing: -0.02em;
+}
+
+.name {
+  background: linear-gradient(135deg, var(--white) 0%, var(--accent-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+/* Check-in button styles */
+.checkInWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg) 0;
+  position: relative;
+  z-index: 1;
+  animation: checkInEnter 0.6s ease-out;
+  animation-delay: 0.1s;
+  animation-fill-mode: both;
+}
+
+@keyframes checkInEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.checkInButtonWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progressRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.progressRingBg {
+  stroke: var(--gray-700);
+  opacity: 0.3;
+}
+
+.progressRingFill {
+  stroke: var(--accent-primary, var(--green-primary));
+  transition: stroke-dashoffset 0.6s ease-out;
+  filter: drop-shadow(0 0 4px var(--accent-glow, var(--green-glow)));
+}
+
+.checkInButton {
+  z-index: 1;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkInButton::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.15) 60deg,
+    transparent 120deg
+  );
+  animation: buttonShine 4s linear infinite;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.checkInButton:not(.checkedIn):not(.disabled)::before {
+  opacity: 1;
+}
+
+@keyframes buttonShine {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.checkInButton.animate {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--accent-glow, var(--green-glow));
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--accent-glow, var(--green-glow)), 0 0 60px var(--accent-glow, var(--green-glow));
+    transform: scale(1.02);
+  }
+}
+
+.checkInButton:hover:not(.checkedIn):not(.disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 50px var(--accent-glow, var(--green-glow));
+}
+
+.checkInButton:active:not(.checkedIn):not(.disabled) {
+  transform: scale(0.98);
+}
+
+.checkInButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--bg-dark), 0 0 0 8px var(--accent-primary, var(--green-primary)), 0 0 50px var(--accent-glow, var(--green-glow));
+}
+
+.checkInButton.checkedIn {
+  background: var(--accent-darker, var(--green-darker));
+  cursor: default;
+  animation: checkedInPulse 0.6s ease-out;
+  box-shadow: 0 0 20px rgba(22, 163, 74, 0.3);
+}
+
+@keyframes checkedInPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(74, 222, 128, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(22, 163, 74, 0.3);
+  }
+}
+
+.checkInButton.disabled {
+  background: var(--gray-700);
+  cursor: not-allowed;
+  animation: none;
+  box-shadow: none;
+}
+
+.buttonContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-dark);
+  z-index: 1;
+}
+
+.buttonText {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+}
+
+.tapHint {
+  font-size: var(--font-size-sm);
+  opacity: 0.7;
+  margin-top: var(--spacing-xs);
+}
+
+.checkIcon {
+  margin-bottom: var(--spacing-sm);
+}
+
+.buttonLabel {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid transparent;
+  border-top-color: var(--bg-dark);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ripple {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: rippleEffect 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes rippleEffect {
+  to {
+    transform: translate(-50%, -50%) scale(40);
+    opacity: 0;
+  }
+}
+
+/* Stats styles */
+.statsContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  animation: statsEnter 0.5s ease-out;
+  animation-delay: 0.2s;
+  animation-fill-mode: both;
+}
+
+@keyframes statsEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.statCard {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--card-padding);
+  width: 100%;
+  max-width: var(--card-max-width);
+  box-shadow: var(--glass-shadow);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow), 0 0 20px var(--accent-glow);
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--gray-400);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.fireIcon {
+  color: var(--yellow-warning);
+}
+
+.statLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statValue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+}
+
+.streakNumber {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  color: var(--white);
+  transition: color var(--transition-base);
+}
+
+.streakNumber.active {
+  color: var(--accent-primary, var(--green-primary));
+}
+
+.statUnit {
+  color: var(--gray-400);
+  font-size: var(--font-size-base);
+}
+
+.progressContainer {
+  margin-top: var(--spacing-md);
+}
+
+.progressBar {
+  height: 4px;
+  background: var(--gray-700);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--spacing-xs);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent-primary, var(--green-primary));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+
+.progressLabel {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
+
+.milestoneBadges {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-700);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.milestoneBadge {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--badge-gradient, var(--bg-dark));
+  border-radius: var(--radius-full);
+  border: none;
+  color: var(--bg-dark);
+  cursor: default;
+  transition: all var(--transition-bounce);
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.milestoneBadge::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  height: 40%;
+  border-radius: var(--radius-full) var(--radius-full) 50% 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent);
+  pointer-events: none;
+}
+
+.milestoneBadge::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--radius-full);
+  background: var(--badge-gradient, transparent);
+  opacity: 0;
+  z-index: -1;
+  filter: blur(8px);
+  transition: opacity var(--transition-base);
+}
+
+.milestoneBadge:hover {
+  transform: scale(1.15) translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.milestoneBadge:hover::after {
+  opacity: 0.6;
+  animation: badgeGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes badgeGlow {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+.protectedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--gradient-accent);
+  color: var(--bg-dark);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  box-shadow: 0 4px 20px var(--accent-glow);
+  position: relative;
+  overflow: hidden;
+}
+
+.protectedBadge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  50%, 100% {
+    left: 100%;
+  }
+}
+
+.lastCheckIn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--gray-500);
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.lastCheckIn svg {
+  opacity: 0.7;
+}
+
+/* Contact info styles */
+.infoContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-top: auto;
+}
+
+.infoCard {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  box-shadow: var(--glass-shadow);
+  transition: transform var(--transition-base);
+}
+
+.infoCard:hover {
+  transform: translateY(-1px);
+}
+
+.infoHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--gray-400);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-sm);
+}
+
+.infoContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.infoName {
+  color: var(--white);
+  font-weight: 700;
+}
+
+.infoEmail {
+  color: var(--gray-400);
+  font-size: var(--font-size-sm);
+}
+
+.petEmoji {
+  font-size: 16px;
+}
+
+/* Vacation badge */
+.vacationBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--blue-accent);
+  color: var(--bg-dark);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-align: center;
+  justify-content: center;
+}
+
+/* Activity Mode section */
+.activitySection {
+  position: relative;
+  z-index: 1;
+}
+
+/* Expandable Stats Card */
+.statCardClickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.expandIcon {
+  margin-left: auto;
+  color: var(--gray-500);
+  transition: transform var(--transition-base);
+}
+
+.expandIconRotated {
+  transform: rotate(180deg);
+}
+
+/* Weekly Section (expandable) */
+.weeklySection {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease-out, opacity 0.2s ease-out, margin-top 0.3s ease-out;
+  margin-top: 0;
+}
+
+.weeklySectionExpanded {
+  max-height: 400px;
+  opacity: 1;
+  margin-top: var(--spacing-md);
+}
+
+.weeklyDivider {
+  height: 1px;
+  background: var(--gray-700);
+  margin-bottom: var(--spacing-md);
+}
+
+.weeklyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.weeklyTitle {
+  color: var(--gray-400);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.weeklyRange {
+  color: var(--gray-500);
+  font-size: var(--font-size-xs);
+}
+
+.weeklyStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.weeklyStat {
+  text-align: center;
+  padding: var(--spacing-sm);
+  background: var(--bg-dark);
+  border-radius: var(--radius-md);
+}
+
+.weeklyStatValue {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--white);
+  display: block;
+}
+
+.weeklyStatLabel {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Mood Chart in Stats */
+.moodChartSection {
+  margin-top: var(--spacing-sm);
+}
+
+.moodChartTitle {
+  display: block;
+  color: var(--gray-400);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-sm);
+}
+
+.moodChartSvg {
+  width: 100%;
+  height: 80px;
+  overflow: visible;
+}
+
+.moodChartLine {
+  fill: none;
+  stroke: var(--accent-primary, var(--green-primary));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px var(--accent-glow, var(--green-glow)));
+}
+
+.moodChartArea {
+  fill: url(#statsMoodGradient);
+  opacity: 0.3;
+}
+
+.moodChartDot {
+  fill: var(--accent-primary, var(--green-primary));
+  filter: drop-shadow(0 0 4px var(--accent-glow, var(--green-glow)));
+  transition: r 0.2s ease;
+}
+
+.moodChartDot:hover {
+  r: 6;
+}
+
+.moodChartLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
+
+.noMoodData {
+  text-align: center;
+  color: var(--gray-500);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-md) 0;
+  margin: 0;
+}
+
+.moodScale {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-700);
+  font-size: var(--font-size-xs);
+  color: var(--gray-400);
+}

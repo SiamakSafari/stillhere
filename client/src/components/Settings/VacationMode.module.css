@@ -1,0 +1,196 @@
+.section {
+  background: var(--bg-mid);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  margin-bottom: var(--spacing-xs);
+  color: var(--accent-primary, var(--green-primary));
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.sectionDescription {
+  font-size: var(--font-size-sm);
+  color: var(--gray-400);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.5;
+}
+
+/* Active vacation state */
+.vacationActive {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.vacationBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.1);
+}
+
+.vacationEmoji {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.5));
+}
+
+.vacationDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vacationStatus {
+  font-weight: 700;
+  color: #60a5fa;
+  font-size: var(--font-size-base);
+}
+
+.vacationDays {
+  font-size: var(--font-size-sm);
+  color: var(--white);
+}
+
+.vacationReturn {
+  font-size: var(--font-size-xs);
+  color: var(--gray-400);
+}
+
+/* Quick duration buttons */
+.quickButtons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.quickButton {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  color: var(--gray-300);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quickButton:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.quickButton:active {
+  transform: scale(0.98);
+}
+
+.quickButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  margin: var(--spacing-md) 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gray-700);
+}
+
+.divider span {
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Vacation form */
+.vacationForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--gray-300);
+  font-weight: 700;
+}
+
+.dateInput {
+  background: var(--bg-dark);
+  border: 2px solid var(--gray-700);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  color: var(--white);
+  font-family: var(--font-mono);
+  width: 100%;
+  transition: all var(--transition-fast);
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--green-primary));
+  box-shadow: 0 0 15px var(--accent-glow, rgba(74, 222, 128, 0.2));
+}
+
+/* Notify contact toggle */
+.notifyToggle {
+  padding: var(--spacing-sm) 0;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-primary, var(--green-primary));
+  cursor: pointer;
+}
+
+.checkboxText {
+  font-size: var(--font-size-sm);
+  color: var(--gray-300);
+}
+
+/* Button row */
+.buttonRow {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+
+/* Button with icon */
+.section button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}

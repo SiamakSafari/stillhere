@@ -1,0 +1,529 @@
+/* Breathing pulse animation for check-in button */
+@keyframes breathe {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--green-glow);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--green-glow), 0 0 60px var(--green-glow);
+    transform: scale(1.02);
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Ripple effect on tap */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Fade out animation */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+/* Slide in from right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* Slide in from left */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+/* Pop in animation */
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-popIn {
+  animation: popIn 0.3s ease-out forwards;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Pulse animation for streak */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 0.5s ease-in-out;
+}
+
+/* Checkmark draw animation */
+@keyframes drawCheck {
+  0% {
+    stroke-dashoffset: 50;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-check {
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: drawCheck 0.4s ease-out forwards;
+}
+
+/* Modal backdrop fade */
+@keyframes backdropFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-backdrop {
+  animation: backdropFade 0.2s ease-out forwards;
+}
+
+/* Modal slide up */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Spin animation for loading */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Staggered fade in for lists */
+@keyframes staggerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: staggerFadeIn 0.3s ease-out forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0ms; }
+.stagger-item:nth-child(2) { animation-delay: 50ms; }
+.stagger-item:nth-child(3) { animation-delay: 100ms; }
+.stagger-item:nth-child(4) { animation-delay: 150ms; }
+.stagger-item:nth-child(5) { animation-delay: 200ms; }
+.stagger-item:nth-child(6) { animation-delay: 250ms; }
+
+/* Page enter animation */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-pageEnter {
+  animation: pageEnter 0.4s ease-out forwards;
+}
+
+/* Bounce in for celebration elements */
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-bounceIn {
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Subtle float for interactive elements */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glow pulse for important elements */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--green-glow);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--green-glow), 0 0 30px var(--green-glow);
+  }
+}
+
+.animate-glowPulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Fire flicker animation for streak flames */
+@keyframes fireFlicker {
+  0%, 100% {
+    transform: scale(1) rotate(-2deg);
+    filter: drop-shadow(0 0 2px #fbbf24);
+  }
+  25% {
+    transform: scale(1.05) rotate(1deg);
+    filter: drop-shadow(0 0 4px #f59e0b);
+  }
+  50% {
+    transform: scale(0.98) rotate(-1deg);
+    filter: drop-shadow(0 0 6px #fbbf24);
+  }
+  75% {
+    transform: scale(1.02) rotate(2deg);
+    filter: drop-shadow(0 0 3px #f97316);
+  }
+}
+
+.animate-fireFlicker {
+  animation: fireFlicker 0.8s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* Intense fire for high streaks */
+@keyframes fireIntense {
+  0%, 100% {
+    transform: scale(1) rotate(-3deg);
+    filter: drop-shadow(0 0 4px #fbbf24) drop-shadow(0 0 8px #f59e0b);
+  }
+  20% {
+    transform: scale(1.08) rotate(2deg);
+    filter: drop-shadow(0 0 6px #f97316) drop-shadow(0 0 12px #fbbf24);
+  }
+  40% {
+    transform: scale(0.95) rotate(-2deg);
+    filter: drop-shadow(0 0 5px #fbbf24) drop-shadow(0 0 10px #ef4444);
+  }
+  60% {
+    transform: scale(1.1) rotate(3deg);
+    filter: drop-shadow(0 0 8px #f59e0b) drop-shadow(0 0 14px #fbbf24);
+  }
+  80% {
+    transform: scale(1.02) rotate(-1deg);
+    filter: drop-shadow(0 0 4px #fbbf24) drop-shadow(0 0 8px #f97316);
+  }
+}
+
+.animate-fireIntense {
+  animation: fireIntense 0.6s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-mid) 0%,
+    var(--bg-light) 20%,
+    var(--bg-mid) 40%,
+    var(--bg-mid) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+.shimmer-text {
+  height: 1em;
+  width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.shimmer-circle {
+  border-radius: 50%;
+}
+
+/* Success checkmark animation */
+@keyframes successPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-successPop {
+  animation: successPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Smooth number transition */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-countUp {
+  animation: countUp 0.3s ease-out;
+}
+
+/* Gradient border animation */
+@keyframes gradientBorder {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradientBorder {
+  background: linear-gradient(
+    90deg,
+    var(--accent-primary),
+    var(--accent-dark),
+    var(--accent-primary)
+  );
+  background-size: 200% 200%;
+  animation: gradientBorder 3s ease infinite;
+}
+
+/* Stagger children animations */
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 500ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 600ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 700ms; }
+
+/* Icon hover animations */
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-iconBounce:hover {
+  animation: iconBounce 0.4s ease-in-out;
+}
+
+/* Settings gear rotation on hover */
+@keyframes gearRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+.animate-gearRotate:hover {
+  animation: gearRotate 0.3s ease-out forwards;
+}
+
+/* Calendar flip animation */
+@keyframes calendarFlip {
+  0% {
+    transform: perspective(200px) rotateX(0deg);
+  }
+  50% {
+    transform: perspective(200px) rotateX(-10deg);
+  }
+  100% {
+    transform: perspective(200px) rotateX(0deg);
+  }
+}
+
+.animate-calendarFlip:hover {
+  animation: calendarFlip 0.4s ease-in-out;
+}
+
+/* Draw-in effect for SVG paths */
+@keyframes drawIn {
+  from {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.animate-drawIn {
+  stroke-dasharray: 100;
+  animation: drawIn 0.6s ease-out forwards;
+}
+
+/* Subtle scale on hover */
+@keyframes subtleScale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-subtleScale:hover {
+  animation: subtleScale 0.3s ease-in-out;
+}

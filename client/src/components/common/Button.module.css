@@ -1,0 +1,146 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Variants */
+.primary {
+  background: var(--green-primary);
+  color: var(--bg-dark);
+}
+
+.primary:hover:not(.disabled) {
+  background: var(--green-dark);
+}
+
+.primary:active:not(.disabled) {
+  background: var(--green-darker);
+}
+
+.secondary {
+  background: var(--bg-mid);
+  color: var(--white);
+  border: 2px solid var(--gray-700);
+}
+
+.secondary:hover:not(.disabled) {
+  border-color: var(--gray-600);
+  background: var(--bg-light);
+}
+
+.danger {
+  background: var(--red-error);
+  color: var(--white);
+}
+
+.danger:hover:not(.disabled) {
+  background: #dc2626;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--gray-400);
+}
+
+.ghost:hover:not(.disabled) {
+  color: var(--white);
+  background: var(--bg-mid);
+}
+
+/* Sizes */
+.small {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
+.medium {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-base);
+}
+
+.large {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  font-size: var(--font-size-lg);
+}
+
+/* States */
+.button.fullWidth {
+  width: 100%;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading {
+  cursor: wait;
+}
+
+/* Focus state */
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--green-primary);
+}
+
+.secondary:focus-visible {
+  border-color: var(--green-primary);
+}
+
+.danger:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--red-error);
+}
+
+.hidden {
+  visibility: hidden;
+}
+
+/* Content wrapper for icon + text */
+.button > span:not(.spinner):not(.ripple) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+/* Spinner */
+.spinner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ripple */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}

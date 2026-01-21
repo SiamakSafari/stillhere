@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PNG Icon Generator - Still Here</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #0a0a0a;
+      color: #fff;
+    }
+    h1 { color: #4ade80; }
+    .icon-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin: 20px 0;
+      padding: 20px;
+      background: #18181b;
+      border-radius: 12px;
+    }
+    canvas {
+      border: 1px solid #333;
+      border-radius: 8px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #4ade80;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { background: #22c55e; }
+    .info { color: #a1a1aa; font-size: 14px; }
+    a { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h1>PNG Icon Generator</h1>
+  <p class="info">Click each "Download" button to save the PNG icons. Then move them to <code>client/public/</code></p>
+
+  <div id="icons"></div>
+
+  <script>
+    const icons = [
+      { name: 'pwa-192x192.png', size: 192 },
+      { name: 'pwa-512x512.png', size: 512 },
+      { name: 'apple-touch-icon.png', size: 180 },
+    ];
+
+    const container = document.getElementById('icons');
+
+    icons.forEach(icon => {
+      const row = document.createElement('div');
+      row.className = 'icon-row';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = icon.size;
+      canvas.height = icon.size;
+      const ctx = canvas.getContext('2d');
+
+      // Draw icon
+      const radius = icon.size * 0.125; // Corner radius
+      const circleRadius = icon.size * 0.333;
+      const centerX = icon.size / 2;
+      const centerY = icon.size / 2;
+
+      // Background with rounded corners
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, icon.size, icon.size, radius);
+      ctx.fill();
+
+      // Green circle
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, circleRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Checkmark
+      ctx.strokeStyle = '#0a0a0a';
+      ctx.lineWidth = icon.size * 0.0625;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      const scale = icon.size / 192;
+      ctx.moveTo(60 * scale, 96 * scale);
+      ctx.lineTo(84 * scale, 120 * scale);
+      ctx.lineTo(132 * scale, 72 * scale);
+      ctx.stroke();
+
+      // Preview (scaled down for display)
+      const displaySize = Math.min(icon.size, 100);
+      canvas.style.width = displaySize + 'px';
+      canvas.style.height = displaySize + 'px';
+
+      const info = document.createElement('div');
+      info.innerHTML = `<strong>${icon.name}</strong><br><span class="info">${icon.size}x${icon.size}px</span>`;
+
+      const btn = document.createElement('button');
+      btn.textContent = 'Download';
+      btn.onclick = () => {
+        const link = document.createElement('a');
+        link.download = icon.name;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      };
+
+      row.appendChild(canvas);
+      row.appendChild(info);
+      row.appendChild(btn);
+      container.appendChild(row);
+    });
+  </script>
+</body>
+</html>

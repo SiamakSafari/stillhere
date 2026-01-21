@@ -1,0 +1,159 @@
+.celebrationOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.celebrationContent {
+  text-align: center;
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.milestoneBadge {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--badge-color) 0%, var(--badge-color-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--spacing-xl);
+  box-shadow:
+    0 0 40px var(--badge-color),
+    0 0 80px var(--badge-color),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 40px var(--badge-color),
+      0 0 80px var(--badge-color),
+      inset 0 0 20px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 60px var(--badge-color),
+      0 0 120px var(--badge-color),
+      inset 0 0 30px rgba(255, 255, 255, 0.3);
+  }
+}
+
+.milestoneIcon {
+  font-size: 4rem;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.milestoneLabel {
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--gray-400);
+  margin-bottom: var(--spacing-sm);
+}
+
+.milestoneTitle {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: var(--spacing-sm);
+  text-shadow: 0 0 20px var(--badge-color);
+}
+
+.milestoneStreak {
+  font-size: var(--font-size-xl);
+  color: var(--badge-color);
+  font-weight: 700;
+  margin-bottom: var(--spacing-xl);
+}
+
+.celebrationMessage {
+  font-size: var(--font-size-base);
+  color: var(--gray-300);
+  max-width: 280px;
+  line-height: 1.6;
+  margin-bottom: var(--spacing-xl);
+}
+
+.dismissButton {
+  background: var(--accent-primary, var(--green-primary));
+  color: var(--bg-dark);
+  border: none;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 0 20px var(--accent-glow, var(--green-glow));
+}
+
+.dismissButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px var(--accent-glow, var(--green-glow));
+}
+
+.dismissButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-dark), 0 0 0 4px var(--white);
+}
+
+/* Different milestone tiers */
+.tier-week {
+  --badge-color: #22c55e;
+  --badge-color-dark: #16a34a;
+}
+
+.tier-twoweeks {
+  --badge-color: #16a34a;
+  --badge-color-dark: #15803d;
+}
+
+.tier-month {
+  --badge-color: #15803d;
+  --badge-color-dark: #166534;
+}
+
+.tier-twomonths {
+  --badge-color: #eab308;
+  --badge-color-dark: #ca8a04;
+}
+
+.tier-century {
+  --badge-color: #60a5fa;
+  --badge-color-dark: #3b82f6;
+}
+
+.tier-year {
+  --badge-color: #f59e0b;
+  --badge-color-dark: #d97706;
+}
