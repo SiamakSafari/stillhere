@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Flame, Shield, Clock, ChevronDown } from 'lucide-react';
+import Lottie from 'lottie-react';
+import { Shield, Clock, ChevronDown } from 'lucide-react';
 import { getNextMilestone, MILESTONES } from '../../utils/time';
 import { AnimatedNumber } from './AnimatedNumber';
+import fireAnimation from '../../assets/animations/fire.json';
 import styles from './MainScreen.module.css';
 
 // Milestone badges with gradient styling
@@ -79,11 +81,11 @@ export const Stats = ({ streak, hasCheckedIn, lastCheckIn, checkInHistory = [] }
   // Get earned milestones
   const earnedMilestones = MILESTONES.filter(m => streak >= m);
 
-  // Determine fire animation intensity based on streak
-  const getFireAnimation = () => {
-    if (streak === 0) return '';
-    if (streak >= 30) return 'animate-fireIntense';
-    return 'animate-fireFlicker';
+  // Determine Lottie animation speed based on streak
+  const getFireSpeed = () => {
+    if (streak === 0) return 0;
+    if (streak >= 30) return 1.5;
+    return 1;
   };
 
   // Calculate weekly summary stats
@@ -201,11 +203,14 @@ export const Stats = ({ streak, hasCheckedIn, lastCheckIn, checkInHistory = [] }
         aria-expanded={expanded}
       >
         <div className={styles.statHeader}>
-          <Flame
-            size={20}
-            fill={streak > 0 ? '#fbbf24' : 'none'}
-            className={`${styles.fireIcon} ${getFireAnimation()}`}
-          />
+          <div className={styles.lottieFireWrapper}>
+            <Lottie
+              animationData={fireAnimation}
+              loop={streak > 0}
+              autoplay={streak > 0}
+              style={{ width: 24, height: 24, opacity: streak > 0 ? 1 : 0.3 }}
+            />
+          </div>
           <span className={styles.statLabel}>Streak</span>
           <ChevronDown
             size={16}

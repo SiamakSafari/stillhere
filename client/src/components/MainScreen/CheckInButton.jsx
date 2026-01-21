@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import Lottie from 'lottie-react';
 import { getNextMilestone, MILESTONES } from '../../utils/time';
+import pulseAnimation from '../../assets/animations/pulse.json';
+import successCheckAnimation from '../../assets/animations/success-check.json';
 import styles from './MainScreen.module.css';
 
 export const CheckInButton = ({
@@ -52,6 +55,17 @@ export const CheckInButton = ({
 
   return (
     <div className={styles.checkInButtonWrapper}>
+      {/* Lottie pulse animation behind button */}
+      {!hasCheckedIn && !disabled && (
+        <div className={styles.pulseAnimationWrapper}>
+          <Lottie
+            animationData={pulseAnimation}
+            loop={true}
+            autoplay={true}
+            style={{ width: 300, height: 300 }}
+          />
+        </div>
+      )}
       {/* Progress ring showing streak progress toward next milestone */}
       {streak > 0 && (
         <svg
@@ -103,19 +117,14 @@ export const CheckInButton = ({
           <div className={styles.spinner} />
         ) : hasCheckedIn ? (
           <>
-            <svg
-              className={styles.checkIcon}
-              width="60"
-              height="60"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 6L9 17l-5-5" className="animate-check" />
-            </svg>
+            <div className={styles.lottieCheckWrapper}>
+              <Lottie
+                animationData={successCheckAnimation}
+                loop={false}
+                autoplay={true}
+                style={{ width: 80, height: 80 }}
+              />
+            </div>
             <span className={styles.buttonLabel}>Done</span>
           </>
         ) : (

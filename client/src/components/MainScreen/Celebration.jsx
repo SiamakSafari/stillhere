@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import Lottie from 'lottie-react';
+import celebrationAnimation from '../../assets/animations/celebration.json';
 import styles from './Celebration.module.css';
 
 // Milestone configurations
@@ -77,6 +79,14 @@ export const Celebration = ({ streak, onDismiss, soundEnabled = false }) => {
         className={`${styles.celebrationContent} ${styles[`tier-${milestone.tier}`]}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <div className={styles.lottieCelebration}>
+          <Lottie
+            animationData={celebrationAnimation}
+            loop={true}
+            autoplay={true}
+            style={{ width: 200, height: 200 }}
+          />
+        </div>
         <p className={styles.milestoneLabel}>{milestone.label}</p>
         <h2 className={styles.milestoneTitle}>{milestone.title}</h2>
         <p className={styles.milestoneStreak}>{streak} Day Streak</p>

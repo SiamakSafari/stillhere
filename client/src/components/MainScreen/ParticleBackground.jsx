@@ -1,14 +1,21 @@
+import Lottie from 'lottie-react';
+import particlesAnimation from '../../assets/animations/particles.json';
 import styles from './ParticleBackground.module.css';
 
 export const ParticleBackground = () => {
-  // Create 15 particles for subtle floating effect
-  const particles = Array.from({ length: 15 }, (_, i) => (
-    <div key={i} className={styles.particle} />
-  ));
-
   return (
     <div className={styles.particleContainer} aria-hidden="true">
-      {particles}
+      <Lottie
+        animationData={particlesAnimation}
+        loop={true}
+        autoplay={true}
+        style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          opacity: 0.6
+        }}
+      />
     </div>
   );
 };
