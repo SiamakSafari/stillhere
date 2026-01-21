@@ -1721,3 +1721,470 @@ Had brief discussion about app monetization:
 ---
 
 *Last updated: 2026-01-19*
+
+---
+
+## 2026-01-20: Family Dashboard & Widget Infrastructure
+
+### Overview
+
+Implemented two major features to increase user engagement and provide peace of mind for emergency contacts:
+1. **Family Dashboard** - Shareable read-only web page for emergency contacts to monitor user's status
+2. **Widget Infrastructure** - Capacitor bridge plugin and native code for iOS/Android home screen widgets (requires manual IDE setup)
+
+---
+
+### Feature 1: Family Dashboard
+
+#### Purpose
+Allow users to share a read-only status page with family members without requiring them to create accounts. Family can check on the user's well-being at any time.
+
+#### Architecture: Token-Based Sharing
+
+No authentication needed - aligns with app's simplicity. Each share link uses a cryptographically secure 64-character token.
+
+**URL format:** `https://stillhere.app/family/{64-char-hex-token}`
+
+#### What the Dashboard Shows (Read-Only)
+- User name
+- Last check-in time (relative: "2 hours ago")
+- Current streak
+- Status indicator (Checked in today / Pending / Overdue)
+- Vacation status (if active)
+- Last 7 days history (visual dots)
+
+#### What's NOT Exposed (Privacy)
+- Mood data
+- Notes
+- Location
+- Emergency contact info
+- Other family share links
+
+---
+
+#### Database Changes
+
+**File:** `server/db/database.js`
+
+**New Table:**
+```sql
+CREATE TABLE IF NOT EXISTS family_shares (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  share_token TEXT UNIQUE NOT NULL,
+  label TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  expires_at TEXT,
+  is_active INTEGER DEFAULT 1,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+)
+```
+
+**New Functions:**
+| Function | Description |
+|----------|-------------|
+| `createFamilyShare(userId, label, expiresAt)` | Create new share link with 256-bit random token |
+| `getFamilyShareByToken(token)` | Look up share by token (for dashboard) |
+| `getFamilySharesByUser(userId)` | Get all shares for a user |
+| `deleteFamilyShare(shareId, userId)` | Delete/revoke a share link |
+| `getCheckInHistory(userId, days)` | Get recent check-in history |
+
+**Token Generation:**
+```javascript
+const crypto = require('crypto');
+const shareToken = crypto.randomBytes(32).toString('hex'); // 64 chars
+```
+
+---
+
+#### Backend API Routes
+
+**File:** `server/routes/family.js` (New)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/family/dashboard/:token` | Get dashboard data for token |
+| GET | `/api/family/shares/:userId` | List user's share links |
+| POST | `/api/family/shares/:userId` | Create new share link |
+| DELETE | `/api/family/shares/:userId/:shareId` | Revoke share link |
+
+**Rate Limiting:**
+- 60 requests per hour per token
+- In-memory store with automatic cleanup
+- Returns 429 Too Many Requests when exceeded
+
+**Rate Limiter Implementation:**
+```javascript
+const rateLimitStore = new Map();
+
+const familyRateLimit = (req, res, next) => {
+  const token = req.params.token;
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000; // 1 hour
+  const maxRequests = 60;
+
+  let record = rateLimitStore.get(token);
+  // ... rate limit logic
+};
+```
+
+---
+
+#### Client API Integration
+
+**File:** `client/src/utils/api.js`
+
+**New Methods:**
+```javascript
+async getFamilyDashboard(token) {
+  const res = await fetch(`${API_URL}/api/family/dashboard/${token}`);
+  return res.json();
+}
+
+async getFamilyShares(userId) {
+  const res = await fetch(`${API_URL}/api/family/shares/${userId}`);
+  return res.json();
+}
+
+async createFamilyShare(userId, label, expiresAt) {
+  const res = await fetch(`${API_URL}/api/family/shares/${userId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label, expiresAt })
+  });
+  return res.json();
+}
+
+async deleteFamilyShare(userId, shareId) {
+  const res = await fetch(`${API_URL}/api/family/shares/${userId}/${shareId}`, {
+    method: 'DELETE'
+  });
+  return res.json();
+}
+```
+
+---
+
+#### Family Dashboard Page
+
+**Files Created:**
+- `client/src/pages/FamilyDashboard.jsx`
+- `client/src/pages/FamilyDashboard.module.css`
+
+**Features:**
+- Auto-refreshes every 5 minutes
+- Responsive design for mobile viewing
+- Status indicator colors:
+  - Green: Checked in today
+  - Yellow: Pending (within 24h)
+  - Red: Overdue (24+ hours)
+- Vacation mode display
+- 7-day history dots
+- Loading and error states
+- Invalid/expired link handling
+
+**Status Logic:**
+```javascript
+const getStatus = () => {
+  if (!data.lastCheckIn) return { status: 'pending', label: 'No check-ins yet' };
+
+  const hoursSince = (Date.now() - new Date(data.lastCheckIn).getTime()) / (1000 * 60 * 60);
+
+  if (data.checkedInToday) return { status: 'ok', label: 'Checked in today' };
+  if (hoursSince < 24) return { status: 'pending', label: 'Check-in pending' };
+  return { status: 'overdue', label: 'Check-in overdue' };
+};
+```
+
+---
+
+#### Route Detection (No React Router)
+
+**File:** `client/src/App.jsx`
+
+Added URL-based route detection to handle `/family/:token` routes without adding React Router dependency:
+
+```javascript
+const parseRoute = () => {
+  const path = window.location.pathname;
+  const familyMatch = path.match(/^\/family\/([a-f0-9]{64})$/i);
+  if (familyMatch) {
+    return { type: 'family', token: familyMatch[1] };
+  }
+  return { type: 'app' };
+};
+
+// In component
+const [route, setRoute] = useState(parseRoute);
+
+// Render based on route
+if (route.type === 'family') {
+  return <FamilyDashboard token={route.token} />;
+}
+```
+
+---
+
+#### Share Link Management UI
+
+**Main Screen Integration:**
+
+**File:** `client/src/components/MainScreen/FamilyShareCard.jsx` (New)
+
+Simplified card for the main screen:
+- "Create Share Link" button (when no link exists)
+- "Copy Share Link" button (when link exists)
+- Auto-copies link on creation
+- "Link Copied!" feedback state
+
+**Settings Integration:**
+
+**File:** `client/src/components/Settings/ShareLinkManager.jsx` (New)
+**File:** `client/src/components/Settings/ShareLinkManager.module.css` (New)
+
+Full management UI for Settings modal:
+- List all share links with labels
+- Create new links with optional label and expiration
+- Copy individual links
+- Delete/revoke links
+- Expiration date picker
+
+**Placement:**
+- Moved FamilyShareCard from Settings to MainScreen ContactInfo section
+- Settings retains ShareLinkManager for full management
+
+---
+
+### Feature 2: Widget Infrastructure
+
+#### Purpose
+Display streak count and check-in status on device home screens for daily visibility.
+
+#### Status: Code Complete, Requires Manual IDE Setup
+
+The JavaScript bridge and native code are written but require manual steps in Xcode (iOS) and Android Studio (Android) to complete setup.
+
+---
+
+#### Capacitor Bridge Plugin
+
+**File:** `client/src/plugins/WidgetBridge.js`
+
+**Plugin Interface:**
+```javascript
+const WidgetBridge = {
+  async updateWidget(data) {
+    // Sends data to native widget
+  },
+  async getWidgetData() {
+    // Retrieves current widget data
+  }
+};
+
+// Helper functions
+export function buildWidgetData(data) {
+  return {
+    streak: data.streak || 0,
+    lastCheckIn: data.lastCheckIn || null,
+    hasCheckedInToday: hasCheckedInToday(data.lastCheckIn),
+    name: data.name || 'User'
+  };
+}
+
+export async function syncWidget(data) {
+  const widgetData = buildWidgetData(data);
+  await WidgetBridge.updateWidget(widgetData);
+}
+```
+
+**Integration Points:**
+- `useCheckIn.js` - Syncs widget after successful check-in
+- `App.jsx` - Syncs widget on app launch and resume
+
+---
+
+#### iOS Widget Files
+
+**Location:** `client/ios/App/StillHereWidget/`
+
+| File | Purpose |
+|------|---------|
+| `StillHereWidget.swift` | Widget bundle entry point |
+| `StillHereProvider.swift` | Timeline provider for widget updates |
+| `StillHereWidgetEntryView.swift` | SwiftUI widget views (small/medium) |
+| `WidgetDataStore.swift` | App Groups data sharing |
+
+**Capacitor Plugin (iOS):**
+- `client/ios/App/App/WidgetBridgePlugin.swift`
+- `client/ios/App/App/WidgetBridgePlugin.m`
+
+**Data Sharing:** Uses App Groups (`group.com.stillhere.app`) to share data between main app and widget extension.
+
+**Manual Setup Required:**
+1. Open `client/ios/App/App.xcworkspace` in Xcode
+2. Add Widget Extension target
+3. Configure App Groups capability on both targets
+4. Add widget files to the extension target
+5. Configure signing for both targets
+
+---
+
+#### Android Widget Files
+
+**Location:** `client/android/app/src/main/java/com/stillhere/app/widget/`
+
+| File | Purpose |
+|------|---------|
+| `StillHereWidget.kt` | AppWidgetProvider implementation |
+| `WidgetDataStore.kt` | SharedPreferences storage |
+| `WidgetBridgePlugin.kt` | Capacitor native plugin |
+
+**Layout Files:**
+- `client/android/app/src/main/res/layout/widget_still_here.xml`
+- `client/android/app/src/main/res/xml/widget_still_here_info.xml`
+
+**AndroidManifest.xml Updates:**
+```xml
+<receiver
+    android:name=".widget.StillHereWidget"
+    android:exported="true">
+    <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+    </intent-filter>
+    <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_still_here_info" />
+</receiver>
+```
+
+**MainActivity.java Update:**
+```java
+@Override
+public void onCreate(Bundle savedInstanceState) {
+    registerPlugin(WidgetBridgePlugin.class);
+    super.onCreate(savedInstanceState);
+}
+```
+
+**Manual Setup Required:**
+1. Open `client/android` in Android Studio
+2. Sync Gradle files
+3. Verify widget appears in widget picker
+4. Test on physical device or emulator
+
+---
+
+### Files Summary
+
+#### New Files Created
+
+**Backend:**
+| File | Purpose |
+|------|---------|
+| `server/routes/family.js` | Family dashboard API routes with rate limiting |
+
+**Frontend - Pages:**
+| File | Purpose |
+|------|---------|
+| `client/src/pages/FamilyDashboard.jsx` | Family dashboard page component |
+| `client/src/pages/FamilyDashboard.module.css` | Dashboard styling |
+
+**Frontend - Components:**
+| File | Purpose |
+|------|---------|
+| `client/src/components/MainScreen/FamilyShareCard.jsx` | Main screen share card |
+| `client/src/components/Settings/ShareLinkManager.jsx` | Full share link management |
+| `client/src/components/Settings/ShareLinkManager.module.css` | Share manager styling |
+
+**Frontend - Plugins:**
+| File | Purpose |
+|------|---------|
+| `client/src/plugins/WidgetBridge.js` | Capacitor widget bridge |
+
+**iOS (Widget Extension):**
+| File | Purpose |
+|------|---------|
+| `StillHereWidget.swift` | Widget entry point |
+| `StillHereProvider.swift` | Timeline provider |
+| `StillHereWidgetEntryView.swift` | SwiftUI views |
+| `WidgetDataStore.swift` | App Groups storage |
+| `WidgetBridgePlugin.swift` | Capacitor plugin |
+| `WidgetBridgePlugin.m` | Plugin registration |
+
+**Android (Widget):**
+| File | Purpose |
+|------|---------|
+| `StillHereWidget.kt` | AppWidgetProvider |
+| `WidgetDataStore.kt` | SharedPreferences storage |
+| `WidgetBridgePlugin.kt` | Capacitor plugin |
+| `widget_still_here.xml` | Widget layout |
+| `widget_still_here_info.xml` | Widget metadata |
+
+---
+
+#### Files Modified
+
+| File | Changes |
+|------|---------|
+| `server/index.js` | Register family routes |
+| `server/db/database.js` | Add family_shares table and functions |
+| `client/src/App.jsx` | Route detection, widget sync on launch |
+| `client/src/utils/api.js` | Family dashboard API methods |
+| `client/src/hooks/useCheckIn.js` | Widget sync after check-in |
+| `client/src/components/MainScreen/index.jsx` | Import FamilyShareCard |
+| `client/src/components/MainScreen/ContactInfo.jsx` | Add FamilyShareCard |
+| `android/app/src/main/AndroidManifest.xml` | Widget receiver |
+| `android/app/src/main/java/.../MainActivity.java` | Register plugin |
+
+---
+
+### Security Considerations
+
+1. **Token Security:** 256-bit cryptographically random tokens (unguessable)
+2. **Rate Limiting:** 60 requests/hour/token prevents abuse
+3. **User Control:** Links can be revoked instantly
+4. **Privacy:** Only essential status info exposed (no mood/notes/location)
+5. **Expiration:** Optional expiration dates for temporary sharing
+
+---
+
+### Testing Checklist
+
+**Family Dashboard:**
+- [x] Share link creation works
+- [x] Dashboard loads with valid token
+- [x] Dashboard shows correct status
+- [x] 7-day history displays correctly
+- [x] Auto-refresh every 5 minutes
+- [x] Invalid token shows error page
+- [x] Rate limiting returns 429 on excess requests
+- [x] Link revocation works immediately
+
+**Widget Infrastructure:**
+- [x] WidgetBridge plugin compiles
+- [x] Widget sync called on check-in
+- [x] Widget sync called on app launch
+- [ ] iOS widget displays (requires Xcode setup)
+- [ ] Android widget displays (requires Android Studio setup)
+
+---
+
+### Next Steps for Widgets
+
+**iOS:**
+1. Open Xcode project
+2. File > New > Target > Widget Extension
+3. Copy widget Swift files to extension
+4. Enable App Groups on both targets
+5. Build and test
+
+**Android:**
+1. Open Android Studio
+2. Sync Gradle
+3. Long-press home screen > Widgets
+4. Find "Still Here" widget
+5. Add to home screen and test
+
+---
+
+*Last updated: 2026-01-20*

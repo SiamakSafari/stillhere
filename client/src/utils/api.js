@@ -187,6 +187,33 @@ export const api = {
       body: JSON.stringify({ userId, activity })
     });
     return handleResponse(response);
+  },
+
+  // Family Dashboard endpoints
+  getFamilyDashboard: async (token) => {
+    const response = await fetchWithRetry(`${API_BASE}/family/dashboard/${token}`);
+    return handleResponse(response);
+  },
+
+  getFamilyShares: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/family/shares/${userId}`);
+    return handleResponse(response);
+  },
+
+  createFamilyShare: async (userId, label = null, expiresAt = null) => {
+    const response = await fetchWithRetry(`${API_BASE}/family/shares/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, expiresAt })
+    });
+    return handleResponse(response);
+  },
+
+  deleteFamilyShare: async (userId, shareId) => {
+    const response = await fetchWithRetry(`${API_BASE}/family/shares/${userId}/${shareId}`, {
+      method: 'DELETE'
+    });
+    return handleResponse(response);
   }
 };
 

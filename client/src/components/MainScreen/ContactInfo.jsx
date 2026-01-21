@@ -1,6 +1,7 @@
+import { FamilyShareCard } from './FamilyShareCard';
 import styles from './MainScreen.module.css';
 
-export const ContactInfo = ({ contactName, contactEmail, petName }) => {
+export const ContactInfo = ({ contactName, contactEmail, petName, userId }) => {
   return (
     <div className={styles.infoContainer}>
       <div className={styles.infoCard}>
@@ -48,6 +49,8 @@ export const ContactInfo = ({ contactName, contactEmail, petName }) => {
           </div>
         </div>
       )}
+
+      <FamilyShareCard userId={userId} />
     </div>
   );
 };

@@ -126,6 +126,7 @@ export const MainScreen = ({ data, updateData, onReset }) => {
           contactName={data.contactName}
           contactEmail={data.contactEmail}
           petName={data.petName}
+          userId={data.userId}
         />
       </div>
 

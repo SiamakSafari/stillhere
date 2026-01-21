@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget colors -->
+    <color name="widget_background">#1A1A1A</color>
+    <color name="widget_border">#333333</color>
+    <color name="widget_text_primary">#FFFFFF</color>
+    <color name="widget_text_secondary">#888888</color>
+
+    <!-- Status colors -->
+    <color name="widget_status_checked_in">#4ADE80</color>
+    <color name="widget_status_pending">#FB923C</color>
+    <color name="widget_status_vacation">#60A5FA</color>
+</resources>

@@ -119,8 +119,23 @@ const initDb = async () => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS family_shares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      share_token TEXT UNIQUE NOT NULL,
+      label TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      expires_at TEXT,
+      is_active INTEGER DEFAULT 1,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   db.run(`CREATE INDEX IF NOT EXISTS idx_users_last_check_in ON users(last_check_in)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_check_ins_user_id ON check_ins(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_token ON family_shares(share_token)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_user_id ON family_shares(user_id)`);
 
   // Run migrations for existing databases
   runMigrations(db);
@@ -418,6 +433,115 @@ function isYesterday(date) {
   yesterday.setDate(yesterday.getDate() - 1);
   return isSameDay(date, yesterday);
 }
+
+// Family share operations
+export const createFamilyShare = async (userId, label = null, expiresAt = null) => {
+  const database = await getDb();
+
+  // Generate 64-character cryptographically secure token
+  const crypto = await import('crypto');
+  const shareToken = crypto.randomBytes(32).toString('hex');
+
+  database.run(`
+    INSERT INTO family_shares (user_id, share_token, label, expires_at)
+    VALUES (?, ?, ?, ?)
+  `, [userId, shareToken, label, expiresAt]);
+
+  saveDb();
+
+  return getFamilyShareByToken(shareToken);
+};
+
+export const getFamilyShareByToken = async (token) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM family_shares WHERE share_token = ? AND is_active = 1
+  `);
+  stmt.bind([token]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  // Check if expired
+  if (row.expires_at && new Date(row.expires_at) < new Date()) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    shareToken: row.share_token,
+    label: row.label,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    isActive: !!row.is_active
+  };
+};
+
+export const getFamilySharesByUser = async (userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM family_shares WHERE user_id = ? AND is_active = 1
+    ORDER BY created_at DESC
+  `);
+  stmt.bind([userId]);
+
+  const shares = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    shares.push({
+      id: row.id,
+      userId: row.user_id,
+      shareToken: row.share_token,
+      label: row.label,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      isActive: !!row.is_active
+    });
+  }
+  stmt.free();
+
+  return shares;
+};
+
+export const deleteFamilyShare = async (shareId, userId) => {
+  const database = await getDb();
+
+  // Soft delete - mark as inactive, and verify ownership
+  database.run(`
+    UPDATE family_shares SET is_active = 0 WHERE id = ? AND user_id = ?
+  `, [shareId, userId]);
+
+  saveDb();
+
+  return { success: true };
+};
+
+// Get check-in history for a user (for family dashboard)
+export const getCheckInHistory = async (userId, days = 7) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT checked_in_at FROM check_ins
+    WHERE user_id = ?
+    AND datetime(checked_in_at) >= datetime('now', '-' || ? || ' days')
+    ORDER BY checked_in_at DESC
+  `);
+  stmt.bind([userId, days]);
+
+  const checkIns = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    checkIns.push(row.checked_in_at);
+  }
+  stmt.free();
+
+  return checkIns;
+};
 
 // Initialize on import
 initDb().catch(console.error);

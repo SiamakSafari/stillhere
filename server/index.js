@@ -7,6 +7,7 @@ import checkinsRouter from './routes/checkins.js';
 import notificationsRouter from './routes/notifications.js';
 import confirmationsRouter, { initConfirmationsTable } from './routes/confirmations.js';
 import activitiesRouter from './routes/activities.js';
+import familyRouter from './routes/family.js';
 import { startScheduler } from './services/scheduler.js';
 import { initPushTable } from './services/push.js';
 
@@ -69,6 +70,7 @@ app.use('/api/test-alert', checkinsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/confirmations', confirmationsRouter);
 app.use('/api/activity', activitiesRouter);
+app.use('/api/family', familyRouter);
 
 // Sentry error handler must be before any other error middleware
 if (process.env.SENTRY_DSN) {

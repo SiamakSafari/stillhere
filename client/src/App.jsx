@@ -1,8 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Onboarding } from './components/Onboarding';
 import { MainScreen } from './components/MainScreen';
+import { FamilyDashboard } from './pages/FamilyDashboard';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { syncToServer } from './utils/api';
+import { syncWidget } from './plugins/WidgetBridge';
+
+// Parse current route from URL
+const parseRoute = () => {
+  const path = window.location.pathname;
+
+  // Match /family/:token route
+  const familyMatch = path.match(/^\/family\/([a-f0-9]{64})$/i);
+  if (familyMatch) {
+    return { type: 'family', token: familyMatch[1] };
+  }
+
+  return { type: 'app' };
+};
 
 // Apply theme to document
 const applyTheme = (theme) => {
@@ -58,6 +75,14 @@ function App() {
   const { data, updateData, resetData, isLoading } = useLocalStorage();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Parse route on mount
+  const route = useMemo(() => parseRoute(), []);
+
+  // If this is a family dashboard route, render it directly
+  if (route.type === 'family') {
+    return <FamilyDashboard token={route.token} />;
+  }
+
   // Apply theme on load and when it changes
   useEffect(() => {
     applyTheme(data.theme || 'system');
@@ -99,6 +124,25 @@ function App() {
       syncToServer(data);
     }
   }, [isOnline, data]);
+
+  // Sync widget on app launch and resume (native platforms only)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !data.onboardingComplete) return;
+
+    // Sync widget with current data
+    syncWidget(data);
+
+    // Listen for app resume to sync widget
+    const listener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        syncWidget(data);
+      }
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, [data.onboardingComplete, data.streak, data.lastCheckIn, data.vacationUntil]);
 
   // Handle completing onboarding
   const handleOnboardingComplete = () => {

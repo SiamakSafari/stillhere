@@ -4,4 +4,6 @@
     <string name="title_activity_main">Still Here</string>
     <string name="package_name">com.stillhere.app</string>
     <string name="custom_url_scheme">com.stillhere.app</string>
+    <string name="widget_description">Check your streak and check-in status at a glance</string>
+    <string name="widget_name">Still Here Widget</string>
 </resources>

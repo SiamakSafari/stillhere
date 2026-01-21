@@ -75,8 +75,8 @@ export const sounds = {
   init: async () => {
     try {
       await Promise.all([
-        loadSound('checkin', '/sounds/checkin.mp3'),
-        loadSound('milestone', '/sounds/milestone.mp3')
+        loadSound('checkin', '/sounds/checkin.wav'),
+        loadSound('milestone', '/sounds/milestone.wav')
       ]);
     } catch (error) {
       console.warn('Could not initialize sounds', error);
@@ -90,7 +90,7 @@ export const sounds = {
     if (soundBuffers.checkin) {
       playBuffer('checkin', 0.4);
     } else {
-      playAudioElement('/sounds/checkin.mp3', 0.4);
+      playAudioElement('/sounds/checkin.wav', 0.4);
     }
   },
 
@@ -101,7 +101,7 @@ export const sounds = {
     if (soundBuffers.milestone) {
       playBuffer('milestone', 0.5);
     } else {
-      playAudioElement('/sounds/milestone.mp3', 0.5);
+      playAudioElement('/sounds/milestone.wav', 0.5);
     }
   }
 };

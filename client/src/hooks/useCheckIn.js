@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { canCheckInToday, isYesterday, isMilestone } from '../utils/time';
 import { api } from '../utils/api';
 import { getCurrentPosition, isGeolocationSupported } from '../utils/geolocation';
 import { trackCheckInCompleted } from '../utils/analytics';
+import { syncWidget } from '../plugins/WidgetBridge';
 
 export const useCheckIn = (data, updateData) => {
   const [isChecking, setIsChecking] = useState(false);
@@ -87,6 +89,17 @@ export const useCheckIn = (data, updateData) => {
 
       // Track check-in analytics
       trackCheckInCompleted(mood);
+
+      // Sync widget on native platforms
+      if (Capacitor.isNativePlatform()) {
+        syncWidget({
+          streak: newStreak,
+          lastCheckIn: now,
+          checkInWindowStart: data.checkInWindowStart,
+          checkInWindowEnd: data.checkInWindowEnd,
+          vacationUntil: data.vacationUntil
+        });
+      }
 
       return { success: true, streak: newStreak, isMilestone: isMilestone(newStreak) };
     } catch (error) {

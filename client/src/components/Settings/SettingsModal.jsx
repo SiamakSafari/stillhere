@@ -10,6 +10,7 @@ import { LocationSettings } from './LocationSettings';
 import { ConfirmationStatus } from './ConfirmationStatus';
 import { PetCard } from './PetCard';
 import { ProofOfLife } from './ProofOfLife';
+import { ShareLinkManager } from './ShareLinkManager';
 import { MemberBadge } from './MemberBadge';
 import { exportData, importData } from '../../utils/storage';
 import { api } from '../../utils/api';
@@ -177,6 +178,8 @@ export const SettingsModal = ({ data, updateData, onClose, onReset }) => {
           <ConfirmationStatus data={data} />
 
           <ProofOfLife data={data} updateData={updateData} />
+
+          <ShareLinkManager data={data} />
 
           <PetCard data={data} updateData={updateData} />
 
