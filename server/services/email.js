@@ -1,7 +1,21 @@
 import sgMail from '@sendgrid/mail';
 import { createConfirmationToken, getConfirmationUrl } from '../routes/confirmations.js';
+import config from '../config.js';
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'alerts@stillhere.app';
+const FROM_EMAIL = config.fromEmail;
+
+// Simple HTML escape to prevent XSS in emails
+const escapeHtml = (text) => {
+  if (!text) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, (m) => map[m]);
+};
 
 // Initialize SendGrid if API key is available
 if (process.env.SENDGRID_API_KEY) {

@@ -3,6 +3,36 @@ const DEFAULT_TIMEOUT = 15000; // 15 seconds
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000; // 1 second base for exponential backoff
 
+// Auth token storage key
+const AUTH_TOKEN_KEY = 'still-here-auth-token';
+
+// Get stored auth token
+const getAuthToken = () => {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+};
+
+// Store auth token
+const setAuthToken = (token) => {
+  try {
+    if (token) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+    }
+  } catch (error) {
+    console.warn('Failed to store auth token:', error);
+  }
+};
+
+// Clear auth token
+export const clearAuthToken = () => {
+  setAuthToken(null);
+};
+
 // Check if error is transient and worth retrying
 const isTransientError = (error, status) => {
   // Network errors
@@ -35,14 +65,33 @@ const fetchWithTimeout = async (url, options, timeout = DEFAULT_TIMEOUT) => {
   }
 };
 
+// Get default headers including auth
+const getHeaders = () => {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 // Fetch with retry and exponential backoff
 const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
   let lastError;
   let lastStatus;
 
+  // Add auth headers
+  const optionsWithAuth = {
+    ...options,
+    headers: {
+      ...getHeaders(),
+      ...options?.headers
+    }
+  };
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await fetchWithTimeout(url, options);
+      const response = await fetchWithTimeout(url, optionsWithAuth);
 
       // If response is ok, return it
       if (response.ok) {
@@ -81,11 +130,16 @@ const fetchWithRetry = async (url, options, retries = MAX_RETRIES) => {
 };
 
 const handleResponse = async (response) => {
+  const data = await response.json().catch(() => ({ error: 'Invalid response' }));
+  
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Network error' }));
-    throw new Error(error.message || 'Request failed');
+    const error = new Error(data.error || data.message || 'Request failed');
+    error.code = data.code;
+    error.status = response.status;
+    throw error;
   }
-  return response.json();
+  
+  return data;
 };
 
 export const api = {
@@ -93,10 +147,16 @@ export const api = {
   createUser: async (userData) => {
     const response = await fetchWithRetry(`${API_BASE}/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    
+    // Store the auth token from registration
+    if (data.authToken) {
+      setAuthToken(data.authToken);
+    }
+    
+    return data;
   },
 
   getUser: async (userId) => {
@@ -107,7 +167,6 @@ export const api = {
   updateUser: async (userId, userData) => {
     const response = await fetchWithRetry(`${API_BASE}/users/${userId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
     });
     return handleResponse(response);
@@ -117,7 +176,6 @@ export const api = {
   checkIn: async (userId, { mood, note, latitude, longitude } = {}) => {
     const response = await fetchWithRetry(`${API_BASE}/checkin`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, mood, note, latitude, longitude })
     });
     return handleResponse(response);
@@ -127,18 +185,15 @@ export const api = {
   setVacation: async (userId, vacationUntil, notifyContact = false) => {
     const response = await fetchWithRetry(`${API_BASE}/vacation`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, vacationUntil, notifyContact })
     });
     return handleResponse(response);
   },
 
-  // Test alert
+  // Test alert (updated endpoint)
   testAlert: async (userId) => {
-    const response = await fetchWithRetry(`${API_BASE}/test-alert`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
+    const response = await fetchWithRetry(`${API_BASE}/users/${userId}/test-alert`, {
+      method: 'POST'
     });
     return handleResponse(response);
   },
@@ -147,7 +202,6 @@ export const api = {
   startActivity: async (userId, activityData) => {
     const response = await fetchWithRetry(`${API_BASE}/activity/start`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, ...activityData })
     });
     return handleResponse(response);
@@ -156,7 +210,6 @@ export const api = {
   completeActivity: async (userId, activityId) => {
     const response = await fetchWithRetry(`${API_BASE}/activity/complete`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, activityId })
     });
     return handleResponse(response);
@@ -165,7 +218,6 @@ export const api = {
   extendActivity: async (userId, minutes) => {
     const response = await fetchWithRetry(`${API_BASE}/activity/extend`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, minutes })
     });
     return handleResponse(response);
@@ -174,7 +226,6 @@ export const api = {
   cancelActivity: async (userId) => {
     const response = await fetchWithRetry(`${API_BASE}/activity/cancel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId })
     });
     return handleResponse(response);
@@ -183,15 +234,22 @@ export const api = {
   sendActivityAlert: async (userId, activity) => {
     const response = await fetchWithRetry(`${API_BASE}/activity/alert`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, activity })
     });
     return handleResponse(response);
   },
 
+  getActivityStatus: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/activity/status/${userId}`);
+    return handleResponse(response);
+  },
+
   // Family Dashboard endpoints
   getFamilyDashboard: async (token) => {
-    const response = await fetchWithRetry(`${API_BASE}/family/dashboard/${token}`);
+    // Family dashboard doesn't need auth - it's accessed via share token
+    const response = await fetchWithTimeout(`${API_BASE}/family/dashboard/${token}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
     return handleResponse(response);
   },
 
@@ -203,7 +261,6 @@ export const api = {
   createFamilyShare: async (userId, label = null, expiresAt = null) => {
     const response = await fetchWithRetry(`${API_BASE}/family/shares/${userId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ label, expiresAt })
     });
     return handleResponse(response);
@@ -213,6 +270,34 @@ export const api = {
     const response = await fetchWithRetry(`${API_BASE}/family/shares/${userId}/${shareId}`, {
       method: 'DELETE'
     });
+    return handleResponse(response);
+  },
+
+  // Push notification endpoints
+  getVapidPublicKey: async () => {
+    const response = await fetchWithRetry(`${API_BASE}/notifications/vapid-public-key`);
+    return handleResponse(response);
+  },
+
+  subscribePush: async (userId, subscription) => {
+    const response = await fetchWithRetry(`${API_BASE}/notifications/subscribe`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, subscription })
+    });
+    return handleResponse(response);
+  },
+
+  unsubscribePush: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/notifications/unsubscribe`, {
+      method: 'POST',
+      body: JSON.stringify({ userId })
+    });
+    return handleResponse(response);
+  },
+
+  // Confirmation status
+  getConfirmationStatus: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/confirmations/status/${userId}`);
     return handleResponse(response);
   }
 };
@@ -226,11 +311,19 @@ export const syncToServer = async (localData) => {
       name: localData.name,
       contactName: localData.contactName,
       contactEmail: localData.contactEmail,
+      contactPhone: localData.contactPhone,
       petName: localData.petName,
       petNotes: localData.petNotes,
+      petEmoji: localData.petEmoji,
       streak: localData.streak,
       lastCheckIn: localData.lastCheckIn,
-      vacationUntil: localData.vacationUntil
+      vacationUntil: localData.vacationUntil,
+      timezone: localData.timezone,
+      checkInWindowStart: localData.checkInWindowStart,
+      checkInWindowEnd: localData.checkInWindowEnd,
+      alertPreference: localData.alertPreference,
+      locationSharingEnabled: localData.locationSharingEnabled,
+      proofOfLifeEnabled: localData.proofOfLifeEnabled
     });
     return serverData;
   } catch (error) {

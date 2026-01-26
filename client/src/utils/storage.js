@@ -141,6 +141,7 @@ export const setStoredData = (data) => {
 export const clearStoredData = () => {
   try {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('still-here-auth-token'); // Also clear auth token
     return true;
   } catch (error) {
     console.error('Error clearing localStorage:', error);

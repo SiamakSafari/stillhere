@@ -1,198 +1,223 @@
-import express from 'express';
-import { getUser, updateUser } from '../db/database.js';
+import { Router } from 'express';
+import { 
+  getUser, 
+  createActivity, 
+  getActiveActivityByUser, 
+  updateActivity,
+  getActivity 
+} from '../db/database.js';
 import { sendActivityAlert } from '../services/email.js';
+import { authenticate, authorizeUser } from '../middleware/auth.js';
+import { validateActivity, validateUUIDParam } from '../middleware/validate.js';
+import { success, notFound, badRequest, serverError } from '../utils/response.js';
+import config from '../config.js';
 
-const router = express.Router();
-
-// In-memory storage for active activities (in production, use database)
-const activeActivities = new Map();
+const router = Router();
 
 // Start an activity
-router.post('/start', async (req, res) => {
-  try {
-    const { userId, type, emoji, label, durationMinutes, shareLocation, details, latitude, longitude, startedAt, expectedEndAt } = req.body;
+router.post('/start',
+  validateActivity,
+  authenticate,
+  authorizeUser(),
+  async (req, res) => {
+    try {
+      const { 
+        userId, 
+        type, 
+        emoji, 
+        label, 
+        durationMinutes, 
+        shareLocation, 
+        details, 
+        latitude, 
+        longitude, 
+        startedAt, 
+        expectedEndAt 
+      } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'userId required' });
+      // Verify user exists (with await - fixes the critical bug)
+      const user = await getUser(userId);
+      if (!user) {
+        return notFound(res, 'User not found');
+      }
+
+      const activityId = Date.now().toString();
+      
+      const activity = await createActivity({
+        id: activityId,
+        userId,
+        type,
+        emoji,
+        label,
+        durationMinutes,
+        shareLocation,
+        details,
+        latitude,
+        longitude,
+        startedAt: startedAt || new Date().toISOString(),
+        expectedEndAt
+      });
+
+      console.log(`[Activity] Started: ${label} for user ${userId}, ends at ${expectedEndAt}`);
+
+      return success(res, { success: true, activity });
+    } catch (err) {
+      console.error('[Activity] Start error:', err);
+      return serverError(res, 'Failed to start activity');
     }
-
-    const user = getUser(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const activity = {
-      id: Date.now().toString(),
-      userId,
-      type,
-      emoji,
-      label,
-      durationMinutes,
-      shareLocation,
-      details,
-      latitude,
-      longitude,
-      startedAt,
-      expectedEndAt,
-      status: 'active'
-    };
-
-    // Store active activity
-    activeActivities.set(userId, activity);
-
-    // Schedule alert check
-    const endTime = new Date(expectedEndAt).getTime();
-    const gracePeriodMs = 5 * 60 * 1000; // 5 minutes
-    const alertTime = endTime + gracePeriodMs - Date.now();
-
-    if (alertTime > 0) {
-      setTimeout(async () => {
-        // Check if activity is still active
-        const current = activeActivities.get(userId);
-        if (current && current.id === activity.id && current.status === 'active') {
-          // Activity expired, send alert
-          try {
-            const currentUser = getUser(userId);
-            if (currentUser) {
-              await sendActivityAlert(currentUser, activity);
-              current.status = 'alerted';
-              activeActivities.set(userId, current);
-            }
-          } catch (e) {
-            console.error('[Activity] Failed to send alert:', e);
-          }
-        }
-      }, alertTime);
-    }
-
-    console.log(`[Activity] Started: ${label} for user ${userId}, ends at ${expectedEndAt}`);
-
-    res.json({ success: true, activity });
-  } catch (error) {
-    console.error('[Activity] Start error:', error);
-    res.status(500).json({ error: 'Failed to start activity' });
   }
-});
+);
 
 // Complete an activity (user checked back in safely)
-router.post('/complete', (req, res) => {
-  try {
-    const { userId } = req.body;
+router.post('/complete',
+  authenticate,
+  authorizeUser(),
+  async (req, res) => {
+    try {
+      const { userId } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'userId required' });
+      if (!userId) {
+        return badRequest(res, 'userId required');
+      }
+
+      const activity = await getActiveActivityByUser(userId);
+      
+      if (activity) {
+        await updateActivity(activity.id, {
+          status: 'completed',
+          completedAt: new Date().toISOString()
+        });
+
+        console.log(`[Activity] Completed safely: ${activity.label} for user ${userId}`);
+      }
+
+      return success(res, { success: true });
+    } catch (err) {
+      console.error('[Activity] Complete error:', err);
+      return serverError(res, 'Failed to complete activity');
     }
-
-    const activity = activeActivities.get(userId);
-    if (activity) {
-      activity.status = 'completed';
-      activity.completedAt = new Date().toISOString();
-      activeActivities.delete(userId);
-
-      console.log(`[Activity] Completed safely: ${activity.label} for user ${userId}`);
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[Activity] Complete error:', error);
-    res.status(500).json({ error: 'Failed to complete activity' });
   }
-});
+);
 
 // Extend an activity
-router.post('/extend', (req, res) => {
-  try {
-    const { userId, minutes } = req.body;
+router.post('/extend',
+  authenticate,
+  authorizeUser(),
+  async (req, res) => {
+    try {
+      const { userId, minutes } = req.body;
 
-    if (!userId || !minutes) {
-      return res.status(400).json({ error: 'userId and minutes required' });
+      if (!userId || !minutes) {
+        return badRequest(res, 'userId and minutes required');
+      }
+
+      if (typeof minutes !== 'number' || minutes < 1 || minutes > 1440) {
+        return badRequest(res, 'Minutes must be between 1 and 1440');
+      }
+
+      const activity = await getActiveActivityByUser(userId);
+      
+      if (!activity) {
+        return notFound(res, 'No active activity found');
+      }
+
+      // Extend the end time
+      const newEndTime = new Date(activity.expectedEndAt);
+      newEndTime.setMinutes(newEndTime.getMinutes() + minutes);
+      
+      const updated = await updateActivity(activity.id, {
+        expectedEndAt: newEndTime.toISOString(),
+        durationMinutes: activity.durationMinutes + minutes
+      });
+
+      console.log(`[Activity] Extended by ${minutes} min: ${activity.label} for user ${userId}`);
+
+      return success(res, { success: true, activity: updated });
+    } catch (err) {
+      console.error('[Activity] Extend error:', err);
+      return serverError(res, 'Failed to extend activity');
     }
-
-    const activity = activeActivities.get(userId);
-    if (!activity) {
-      return res.status(404).json({ error: 'No active activity found' });
-    }
-
-    // Extend the end time
-    const newEndTime = new Date(activity.expectedEndAt);
-    newEndTime.setMinutes(newEndTime.getMinutes() + minutes);
-    activity.expectedEndAt = newEndTime.toISOString();
-    activity.durationMinutes += minutes;
-
-    activeActivities.set(userId, activity);
-
-    console.log(`[Activity] Extended by ${minutes} min: ${activity.label} for user ${userId}`);
-
-    res.json({ success: true, activity });
-  } catch (error) {
-    console.error('[Activity] Extend error:', error);
-    res.status(500).json({ error: 'Failed to extend activity' });
   }
-});
+);
 
 // Cancel an activity
-router.post('/cancel', (req, res) => {
-  try {
-    const { userId } = req.body;
+router.post('/cancel',
+  authenticate,
+  authorizeUser(),
+  async (req, res) => {
+    try {
+      const { userId } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'userId required' });
+      if (!userId) {
+        return badRequest(res, 'userId required');
+      }
+
+      const activity = await getActiveActivityByUser(userId);
+      
+      if (activity) {
+        await updateActivity(activity.id, { status: 'cancelled' });
+        console.log(`[Activity] Cancelled: ${activity.label} for user ${userId}`);
+      }
+
+      return success(res, { success: true });
+    } catch (err) {
+      console.error('[Activity] Cancel error:', err);
+      return serverError(res, 'Failed to cancel activity');
     }
-
-    const activity = activeActivities.get(userId);
-    if (activity) {
-      activity.status = 'cancelled';
-      activeActivities.delete(userId);
-
-      console.log(`[Activity] Cancelled: ${activity.label} for user ${userId}`);
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[Activity] Cancel error:', error);
-    res.status(500).json({ error: 'Failed to cancel activity' });
   }
-});
+);
 
 // Manually trigger activity alert (from client if server check fails)
-router.post('/alert', async (req, res) => {
-  try {
-    const { userId, activity } = req.body;
+router.post('/alert',
+  authenticate,
+  authorizeUser(),
+  async (req, res) => {
+    try {
+      const { userId, activity } = req.body;
 
-    if (!userId || !activity) {
-      return res.status(400).json({ error: 'userId and activity required' });
+      if (!userId || !activity) {
+        return badRequest(res, 'userId and activity required');
+      }
+
+      // Verify user exists
+      const user = await getUser(userId);
+      if (!user) {
+        return notFound(res, 'User not found');
+      }
+
+      await sendActivityAlert(user, activity);
+
+      // Mark the activity as alerted in database
+      if (activity.id) {
+        await updateActivity(activity.id, { status: 'alerted' });
+      }
+
+      console.log(`[Activity] Alert sent for: ${activity.label} for user ${userId}`);
+
+      return success(res, { success: true });
+    } catch (err) {
+      console.error('[Activity] Alert error:', err);
+      return serverError(res, 'Failed to send activity alert');
     }
-
-    const user = getUser(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    await sendActivityAlert(user, activity);
-
-    // Remove from active activities
-    activeActivities.delete(userId);
-
-    console.log(`[Activity] Alert sent for: ${activity.label} for user ${userId}`);
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('[Activity] Alert error:', error);
-    res.status(500).json({ error: 'Failed to send activity alert' });
   }
-});
+);
 
 // Get current activity status
-router.get('/status/:userId', (req, res) => {
-  try {
-    const { userId } = req.params;
-    const activity = activeActivities.get(userId);
+router.get('/status/:userId',
+  validateUUIDParam('userId'),
+  authenticate,
+  authorizeUser('userId'),
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const activity = await getActiveActivityByUser(userId);
 
-    res.json({ activity: activity || null });
-  } catch (error) {
-    console.error('[Activity] Status error:', error);
-    res.status(500).json({ error: 'Failed to get activity status' });
+      return success(res, { activity: activity || null });
+    } catch (err) {
+      console.error('[Activity] Status error:', err);
+      return serverError(res, 'Failed to get activity status');
+    }
   }
-});
+);
 
 export default router;

@@ -1,12 +1,20 @@
 import cron from 'node-cron';
-import { getUsersNeedingReminder, getLastCheckInLocation } from '../db/database.js';
-import { sendAlert, sendReminder } from './email.js';
+import { 
+  getUsersNeedingReminder, 
+  getLastCheckInLocation,
+  getOverdueActivities,
+  updateActivity,
+  getUser,
+  pruneOldCheckIns
+} from '../db/database.js';
+import { sendAlert, sendReminder, sendActivityAlert } from './email.js';
 import { sendAlertSMS, isSMSConfigured } from './sms.js';
 import { sendReminderPush } from './push.js';
+import config from '../config.js';
 
-// Track which users have received reminders/alerts to avoid duplicates
-const sentReminders = new Set();
-const sentAlerts = new Set();
+// Track which users have received reminders/alerts to avoid duplicates per day
+const sentReminders = new Map();
+const sentAlerts = new Map();
 
 // Check if current time is past user's check-in window end
 const isPastCheckInWindow = (user) => {
@@ -24,21 +32,25 @@ const isPastCheckInWindow = (user) => {
     windowEnd.setHours(endHour, endMinute, 0, 0);
 
     return userTime > windowEnd;
-  } catch (error) {
-    console.error(`[Scheduler] Error checking window for user ${user.name}:`, error);
+  } catch (err) {
+    console.error(`[Scheduler] Error checking window for user ${user.name}:`, err);
     return true; // Default to sending if we can't determine
   }
 };
+
+// Get today's date string for tracking
+const getTodayKey = () => new Date().toISOString().split('T')[0];
 
 const checkMissedCheckIns = async () => {
   console.log('[Scheduler] Checking for missed check-ins...');
 
   try {
     // Get users who haven't checked in for 24+ hours (reminder)
-    const usersForReminder = await getUsersNeedingReminder(24);
+    const usersForReminder = await getUsersNeedingReminder(config.reminderThresholdHours);
+    const todayKey = getTodayKey();
 
     for (const user of usersForReminder) {
-      const reminderKey = `${user.id}-${new Date().toDateString()}`;
+      const reminderKey = `${user.id}:${todayKey}`;
 
       // Skip if already sent reminder today
       if (sentReminders.has(reminderKey)) continue;
@@ -52,8 +64,8 @@ const checkMissedCheckIns = async () => {
       // Check if we're past the user's check-in window
       const pastWindow = isPastCheckInWindow(user);
 
-      if (hoursSinceCheckIn >= 48) {
-        const alertKey = `${user.id}-${new Date().toDateString()}`;
+      if (hoursSinceCheckIn >= config.alertThresholdHours) {
+        const alertKey = `${user.id}:${todayKey}`;
 
         if (!sentAlerts.has(alertKey)) {
           console.log(`[Scheduler] Sending alert for user ${user.name} (${hoursSinceCheckIn.toFixed(1)}h since check-in)`);
@@ -80,9 +92,9 @@ const checkMissedCheckIns = async () => {
             });
           }
 
-          sentAlerts.add(alertKey);
+          sentAlerts.set(alertKey, Date.now());
         }
-      } else if (hoursSinceCheckIn >= 24 && pastWindow) {
+      } else if (hoursSinceCheckIn >= config.reminderThresholdHours && pastWindow) {
         // Only send reminder if past user's check-in window
         console.log(`[Scheduler] Sending reminder for user ${user.name} (${hoursSinceCheckIn.toFixed(1)}h since check-in, past window)`);
         await sendReminder(user);
@@ -94,39 +106,84 @@ const checkMissedCheckIns = async () => {
           // Push notification is optional, don't fail if it doesn't work
         }
 
-        sentReminders.add(reminderKey);
+        sentReminders.set(reminderKey, Date.now());
       }
     }
-  } catch (error) {
-    console.error('[Scheduler] Error checking missed check-ins:', error);
+  } catch (err) {
+    console.error('[Scheduler] Error checking missed check-ins:', err);
   }
 };
 
-// Clean up old tracking entries daily
-const cleanupTracking = () => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = yesterday.toDateString();
+// Check for overdue activities and send alerts
+const checkOverdueActivities = async () => {
+  console.log('[Scheduler] Checking for overdue activities...');
 
-  for (const key of sentReminders) {
-    if (key.includes(yesterdayKey)) {
+  try {
+    const overdueActivities = await getOverdueActivities();
+
+    for (const activity of overdueActivities) {
+      console.log(`[Scheduler] Activity overdue: ${activity.label} for user ${activity.userId}`);
+
+      const user = await getUser(activity.userId);
+      if (!user) {
+        console.warn(`[Scheduler] User not found for activity: ${activity.userId}`);
+        continue;
+      }
+
+      try {
+        await sendActivityAlert(user, activity);
+        await updateActivity(activity.id, { status: 'alerted' });
+        console.log(`[Scheduler] Activity alert sent for: ${activity.label}`);
+      } catch (err) {
+        console.error(`[Scheduler] Failed to send activity alert:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('[Scheduler] Error checking overdue activities:', err);
+  }
+};
+
+// Clean up old tracking entries
+const cleanupTracking = () => {
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  // Clean entries older than 24 hours
+  for (const [key, timestamp] of sentReminders.entries()) {
+    if (now - timestamp > oneDayMs) {
       sentReminders.delete(key);
     }
   }
 
-  for (const key of sentAlerts) {
-    if (key.includes(yesterdayKey)) {
+  for (const [key, timestamp] of sentAlerts.entries()) {
+    if (now - timestamp > oneDayMs) {
       sentAlerts.delete(key);
     }
+  }
+};
+
+// Prune old data for data retention
+const pruneOldData = async () => {
+  console.log('[Scheduler] Pruning old check-in data...');
+  try {
+    await pruneOldCheckIns(config.maxCheckInHistoryDays);
+    console.log('[Scheduler] Old data pruned successfully');
+  } catch (err) {
+    console.error('[Scheduler] Error pruning old data:', err);
   }
 };
 
 export const startScheduler = () => {
   console.log('[Scheduler] Starting scheduler...');
 
-  // Run every hour at minute 0
+  // Check for missed check-ins every hour at minute 0
   cron.schedule('0 * * * *', () => {
     checkMissedCheckIns();
+  });
+
+  // Check for overdue activities every minute
+  cron.schedule('* * * * *', () => {
+    checkOverdueActivities();
   });
 
   // Clean up tracking daily at midnight
@@ -134,10 +191,20 @@ export const startScheduler = () => {
     cleanupTracking();
   });
 
-  // Run initial check on startup (delayed to allow DB to initialize)
+  // Prune old check-in data weekly on Sunday at 3am
+  cron.schedule('0 3 * * 0', () => {
+    pruneOldData();
+  });
+
+  // Run initial checks on startup (delayed to allow DB to initialize)
   setTimeout(() => {
     checkMissedCheckIns();
+    checkOverdueActivities();
   }, 2000);
 
-  console.log('[Scheduler] Scheduler started - checking every hour');
+  console.log('[Scheduler] Scheduler started:');
+  console.log('  - Check-in monitoring: every hour');
+  console.log('  - Activity monitoring: every minute');
+  console.log('  - Tracking cleanup: daily at midnight');
+  console.log('  - Data pruning: weekly on Sunday at 3am');
 };

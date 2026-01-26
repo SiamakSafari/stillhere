@@ -2,9 +2,12 @@ import initSqlJs from 'sql.js';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
+import config from '../config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DATABASE_PATH || join(__dirname, 'stillhere.db');
+const dbPath = config.databasePath.startsWith('.') 
+  ? join(__dirname, '..', config.databasePath)
+  : config.databasePath;
 
 // Ensure db directory exists
 const dbDir = dirname(dbPath);
@@ -50,6 +53,9 @@ const runMigrations = (database) => {
   }
   if (!userColumns.has('vet_phone')) {
     database.run('ALTER TABLE users ADD COLUMN vet_phone TEXT');
+  }
+  if (!userColumns.has('auth_token')) {
+    database.run('ALTER TABLE users ADD COLUMN auth_token TEXT');
   }
 
   // Get existing columns for check_ins table
@@ -101,6 +107,7 @@ const initDb = async () => {
       streak INTEGER DEFAULT 0,
       last_check_in TEXT,
       vacation_until TEXT,
+      auth_token TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )
@@ -132,10 +139,35 @@ const initDb = async () => {
     )
   `);
 
+  // Activities table for persistent storage (fixes in-memory issue)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS activities (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      type TEXT,
+      emoji TEXT,
+      label TEXT,
+      duration_minutes INTEGER,
+      share_location INTEGER DEFAULT 0,
+      details TEXT,
+      latitude REAL,
+      longitude REAL,
+      started_at TEXT NOT NULL,
+      expected_end_at TEXT NOT NULL,
+      completed_at TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
   db.run(`CREATE INDEX IF NOT EXISTS idx_users_last_check_in ON users(last_check_in)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_users_auth_token ON users(auth_token)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_check_ins_user_id ON check_ins(user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_token ON family_shares(share_token)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_user_id ON family_shares(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status)`);
 
   // Run migrations for existing databases
   runMigrations(db);
@@ -164,10 +196,14 @@ export const getDb = async () => {
 export const createUser = async (user) => {
   const database = await getDb();
 
+  // Generate auth token for the user
+  const crypto = await import('crypto');
+  const authToken = crypto.randomBytes(32).toString('hex');
+
   database.run(`
-    INSERT INTO users (id, name, contact_name, contact_email, pet_name, pet_notes, pet_emoji)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, [user.id, user.name, user.contactName, user.contactEmail, user.petName || null, user.petNotes || null, user.petEmoji || null]);
+    INSERT INTO users (id, name, contact_name, contact_email, pet_name, pet_notes, pet_emoji, auth_token)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [user.id, user.name, user.contactName, user.contactEmail, user.petName || null, user.petNotes || null, user.petEmoji || null, authToken]);
 
   saveDb();
   return getUser(user.id);
@@ -202,13 +238,33 @@ export const getUser = async (id) => {
     vacationUntil: row.vacation_until,
     checkInWindowStart: row.check_in_window_start,
     checkInWindowEnd: row.check_in_window_end,
-    timezone: row.timezone,
+    timezone: row.timezone || 'UTC',
     alertPreference: row.alert_preference,
     locationSharingEnabled: !!row.location_sharing_enabled,
     proofOfLifeEnabled: !!row.proof_of_life_enabled,
+    authToken: row.auth_token,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
+};
+
+// Get user by auth token
+export const getUserByAuthToken = async (token) => {
+  if (!token) return null;
+  
+  const database = await getDb();
+  const stmt = database.prepare('SELECT id FROM users WHERE auth_token = ?');
+  stmt.bind([token]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return getUser(row.id);
 };
 
 export const updateUser = async (id, updates) => {
@@ -308,16 +364,16 @@ export const recordCheckIn = async (userId, { mood, note, latitude, longitude } 
   const now = new Date();
   const lastCheckIn = user.lastCheckIn ? new Date(user.lastCheckIn) : null;
 
-  // Check if already checked in today
-  if (lastCheckIn && isSameDay(lastCheckIn, now)) {
+  // Check if already checked in today (timezone-aware)
+  if (lastCheckIn && isSameDayInTimezone(lastCheckIn, now, user.timezone)) {
     return { alreadyCheckedIn: true, user };
   }
 
-  // Calculate new streak
+  // Calculate new streak (timezone-aware)
   let newStreak;
   if (!lastCheckIn) {
     newStreak = 1;
-  } else if (isYesterday(lastCheckIn)) {
+  } else if (isYesterdayInTimezone(lastCheckIn, now, user.timezone)) {
     newStreak = user.streak + 1;
   } else {
     newStreak = 1;
@@ -379,7 +435,7 @@ export const getUsersNeedingReminder = async (hours = 24) => {
       vacationUntil: row.vacation_until,
       checkInWindowStart: row.check_in_window_start,
       checkInWindowEnd: row.check_in_window_end,
-      timezone: row.timezone,
+      timezone: row.timezone || 'UTC',
       alertPreference: row.alert_preference,
       locationSharingEnabled: !!row.location_sharing_enabled,
       proofOfLifeEnabled: !!row.proof_of_life_enabled,
@@ -419,7 +475,38 @@ export const getLastCheckInLocation = async (userId) => {
   };
 };
 
-// Helper functions
+// Timezone-aware date helpers
+function getDateInTimezone(date, timezone) {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    return formatter.format(date);
+  } catch (error) {
+    // Fallback to UTC if timezone is invalid
+    return date.toISOString().split('T')[0];
+  }
+}
+
+function isSameDayInTimezone(date1, date2, timezone) {
+  return getDateInTimezone(date1, timezone) === getDateInTimezone(date2, timezone);
+}
+
+function isYesterdayInTimezone(checkDate, nowDate, timezone) {
+  const checkDateStr = getDateInTimezone(checkDate, timezone);
+  
+  // Get yesterday in the user's timezone
+  const yesterday = new Date(nowDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = getDateInTimezone(yesterday, timezone);
+  
+  return checkDateStr === yesterdayStr;
+}
+
+// Legacy helpers (kept for backward compatibility but not recommended)
 function isSameDay(date1, date2) {
   return (
     date1.getFullYear() === date2.getFullYear() &&
@@ -541,6 +628,151 @@ export const getCheckInHistory = async (userId, days = 7) => {
   stmt.free();
 
   return checkIns;
+};
+
+// Activity operations (persistent storage)
+export const createActivity = async (activity) => {
+  const database = await getDb();
+  
+  // Cancel any existing active activity for this user
+  database.run(
+    `UPDATE activities SET status = 'cancelled' WHERE user_id = ? AND status = 'active'`,
+    [activity.userId]
+  );
+
+  database.run(`
+    INSERT INTO activities (id, user_id, type, emoji, label, duration_minutes, share_location, details, latitude, longitude, started_at, expected_end_at, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+  `, [
+    activity.id,
+    activity.userId,
+    activity.type || null,
+    activity.emoji || null,
+    activity.label || null,
+    activity.durationMinutes || null,
+    activity.shareLocation ? 1 : 0,
+    activity.details || null,
+    activity.latitude || null,
+    activity.longitude || null,
+    activity.startedAt,
+    activity.expectedEndAt
+  ]);
+
+  saveDb();
+  return getActivity(activity.id);
+};
+
+export const getActivity = async (id) => {
+  const database = await getDb();
+  const stmt = database.prepare('SELECT * FROM activities WHERE id = ?');
+  stmt.bind([id]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return rowToActivity(row);
+};
+
+export const getActiveActivityByUser = async (userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM activities WHERE user_id = ? AND status = 'active' LIMIT 1
+  `);
+  stmt.bind([userId]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return rowToActivity(row);
+};
+
+export const updateActivity = async (id, updates) => {
+  const database = await getDb();
+  const fields = [];
+  const values = [];
+
+  if (updates.status !== undefined) {
+    fields.push('status = ?');
+    values.push(updates.status);
+  }
+  if (updates.completedAt !== undefined) {
+    fields.push('completed_at = ?');
+    values.push(updates.completedAt);
+  }
+  if (updates.expectedEndAt !== undefined) {
+    fields.push('expected_end_at = ?');
+    values.push(updates.expectedEndAt);
+  }
+  if (updates.durationMinutes !== undefined) {
+    fields.push('duration_minutes = ?');
+    values.push(updates.durationMinutes);
+  }
+
+  if (fields.length === 0) return getActivity(id);
+
+  values.push(id);
+  database.run(`UPDATE activities SET ${fields.join(', ')} WHERE id = ?`, values);
+  saveDb();
+
+  return getActivity(id);
+};
+
+export const getOverdueActivities = async () => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM activities 
+    WHERE status = 'active' 
+    AND datetime(expected_end_at) < datetime('now', '-5 minutes')
+  `);
+
+  const activities = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    activities.push(rowToActivity(row));
+  }
+  stmt.free();
+
+  return activities;
+};
+
+function rowToActivity(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    emoji: row.emoji,
+    label: row.label,
+    durationMinutes: row.duration_minutes,
+    shareLocation: !!row.share_location,
+    details: row.details,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    startedAt: row.started_at,
+    expectedEndAt: row.expected_end_at,
+    completedAt: row.completed_at,
+    status: row.status,
+    createdAt: row.created_at
+  };
+}
+
+// Prune old check-ins (data retention)
+export const pruneOldCheckIns = async (days = config.maxCheckInHistoryDays) => {
+  const database = await getDb();
+  database.run(`
+    DELETE FROM check_ins 
+    WHERE datetime(checked_in_at) < datetime('now', '-' || ? || ' days')
+  `, [days]);
+  saveDb();
 };
 
 // Initialize on import

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb, saveDb, getUser } from '../db/database.js';
 import crypto from 'crypto';
+import config from '../config.js';
 
 const router = Router();
 
@@ -39,14 +40,19 @@ export const createConfirmationToken = async (userId, alertType = 'email') => {
 
 // Get confirmation URL
 export const getConfirmationUrl = (token) => {
-  const baseUrl = process.env.APP_URL || 'http://localhost:5173';
-  return `${baseUrl}/api/confirmations/confirm/${token}`;
+  return `${config.appUrl}/api/confirmations/confirm/${token}`;
 };
 
-// Confirm alert was received
+// Confirm alert was received (returns HTML page)
 router.get('/confirm/:token', async (req, res) => {
   try {
     const { token } = req.params;
+
+    // Validate token format
+    if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
+      return res.status(400).send(getErrorPage('Invalid confirmation link format.'));
+    }
+
     const db = await getDb();
 
     // Find the confirmation
@@ -79,8 +85,8 @@ router.get('/confirm/:token', async (req, res) => {
     saveDb();
 
     res.send(getSuccessPage(confirmation.user_name, false));
-  } catch (error) {
-    console.error('Error confirming alert:', error);
+  } catch (err) {
+    console.error('Error confirming alert:', err);
     res.status(500).send(getErrorPage('An error occurred. Please try again.'));
   }
 });
@@ -89,6 +95,15 @@ router.get('/confirm/:token', async (req, res) => {
 router.get('/status/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      return res.status(400).json({ 
+        error: 'Invalid user ID format',
+        code: 'INVALID_UUID'
+      });
+    }
+
     const db = await getDb();
 
     const stmt = db.prepare(`
@@ -115,14 +130,18 @@ router.get('/status/:userId', async (req, res) => {
         alertType: confirmation.alert_type
       }
     });
-  } catch (error) {
-    console.error('Error getting confirmation status:', error);
-    res.status(500).json({ error: 'Failed to get confirmation status' });
+  } catch (err) {
+    console.error('Error getting confirmation status:', err);
+    res.status(500).json({ 
+      error: 'Failed to get confirmation status',
+      code: 'INTERNAL_ERROR'
+    });
   }
 });
 
 // HTML templates for confirmation page
 function getSuccessPage(userName, alreadyConfirmed) {
+  const escapedName = escapeHtml(userName);
   return `
     <!DOCTYPE html>
     <html>
@@ -171,12 +190,12 @@ function getSuccessPage(userName, alreadyConfirmed) {
         <h1>${alreadyConfirmed ? 'Already Confirmed' : 'Alert Confirmed!'}</h1>
         <p>
           ${alreadyConfirmed
-            ? `You've already confirmed that you received the alert about <span class="user-name">${userName}</span>.`
-            : `Thank you for confirming that you received the alert about <span class="user-name">${userName}</span>.`
+            ? `You've already confirmed that you received the alert about <span class="user-name">${escapedName}</span>.`
+            : `Thank you for confirming that you received the alert about <span class="user-name">${escapedName}</span>.`
           }
         </p>
         <p>
-          This helps ensure ${userName} is safe and that the alert system is working properly.
+          This helps ensure ${escapedName} is safe and that the alert system is working properly.
         </p>
       </div>
     </body>
@@ -185,6 +204,7 @@ function getSuccessPage(userName, alreadyConfirmed) {
 }
 
 function getErrorPage(message) {
+  const escapedMessage = escapeHtml(message);
   return `
     <!DOCTYPE html>
     <html>
@@ -230,11 +250,23 @@ function getErrorPage(message) {
       <div class="container">
         <div class="icon">!</div>
         <h1>Error</h1>
-        <p>${message}</p>
+        <p>${escapedMessage}</p>
       </div>
     </body>
     </html>
   `;
+}
+
+// Simple HTML escape to prevent XSS
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, (m) => map[m]);
 }
 
 export default router;

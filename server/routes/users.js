@@ -1,27 +1,21 @@
 import { Router } from 'express';
 import { createUser, getUser, updateUser } from '../db/database.js';
 import { sendAlert } from '../services/email.js';
+import { authenticate, authorizeUser } from '../middleware/auth.js';
+import { validateUser, validateUUIDParam } from '../middleware/validate.js';
+import { success, created, notFound, conflict, serverError } from '../utils/response.js';
 
 const router = Router();
 
-// Create a new user
-router.post('/', async (req, res) => {
+// Create a new user (no auth required - registration)
+router.post('/', validateUser, async (req, res) => {
   try {
     const { id, name, contactName, contactEmail, petName, petNotes, petEmoji } = req.body;
-
-    if (!id || !name || !contactName || !contactEmail) {
-      return res.status(400).json({
-        error: 'Missing required fields: id, name, contactName, contactEmail'
-      });
-    }
 
     // Check if user already exists
     const existingUser = await getUser(id);
     if (existingUser) {
-      return res.status(409).json({
-        error: 'User already exists',
-        user: existingUser
-      });
+      return conflict(res, 'User already exists', { user: existingUser });
     }
 
     const user = await createUser({
@@ -34,66 +28,86 @@ router.post('/', async (req, res) => {
       petEmoji
     });
 
-    res.status(201).json(user);
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    // Return user with auth token for future requests
+    return created(res, {
+      ...user,
+      message: 'User created successfully'
+    });
+  } catch (err) {
+    console.error('Error creating user:', err);
+    return serverError(res, 'Failed to create user');
   }
 });
 
 // Get a user by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const user = await getUser(req.params.id);
+router.get('/:id', 
+  validateUUIDParam('id'),
+  authenticate, 
+  authorizeUser('id'),
+  async (req, res) => {
+    try {
+      const user = await getUser(req.params.id);
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      if (!user) {
+        return notFound(res, 'User not found');
+      }
+
+      return success(res, user);
+    } catch (err) {
+      console.error('Error getting user:', err);
+      return serverError(res, 'Failed to get user');
     }
-
-    res.json(user);
-  } catch (error) {
-    console.error('Error getting user:', error);
-    res.status(500).json({ error: 'Failed to get user' });
   }
-});
+);
 
 // Update a user
-router.put('/:id', async (req, res) => {
-  try {
-    const existingUser = await getUser(req.params.id);
+router.put('/:id',
+  validateUUIDParam('id'),
+  validateUser,
+  authenticate,
+  authorizeUser('id'),
+  async (req, res) => {
+    try {
+      const existingUser = await getUser(req.params.id);
 
-    if (!existingUser) {
-      return res.status(404).json({ error: 'User not found' });
+      if (!existingUser) {
+        return notFound(res, 'User not found');
+      }
+
+      const user = await updateUser(req.params.id, req.body);
+      return success(res, user);
+    } catch (err) {
+      console.error('Error updating user:', err);
+      return serverError(res, 'Failed to update user');
     }
-
-    const user = await updateUser(req.params.id, req.body);
-    res.json(user);
-  } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ error: 'Failed to update user' });
   }
-});
+);
 
 // Send test alert
-router.post('/:id/test-alert', async (req, res) => {
-  try {
-    const user = await getUser(req.params.id);
+router.post('/:id/test-alert',
+  validateUUIDParam('id'),
+  authenticate,
+  authorizeUser('id'),
+  async (req, res) => {
+    try {
+      const user = await getUser(req.params.id);
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      if (!user) {
+        return notFound(res, 'User not found');
+      }
+
+      const result = await sendAlert(user, true);
+
+      if (result.success) {
+        return success(res, { message: 'Test email sent successfully' });
+      } else {
+        return serverError(res, result.error || 'Failed to send test email');
+      }
+    } catch (err) {
+      console.error('Error sending test alert:', err);
+      return serverError(res, 'Failed to send test alert');
     }
-
-    const result = await sendAlert(user, true);
-
-    if (result.success) {
-      res.json({ message: 'Test email sent successfully' });
-    } else {
-      res.status(500).json({ error: result.error || 'Failed to send test email' });
-    }
-  } catch (error) {
-    console.error('Error sending test alert:', error);
-    res.status(500).json({ error: 'Failed to send test alert' });
   }
-});
+);
 
 export default router;
