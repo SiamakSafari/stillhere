@@ -2,6 +2,7 @@ import initSqlJs from 'sql.js';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
+import crypto from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.DATABASE_PATH || join(__dirname, 'stillhere.db');
@@ -51,6 +52,13 @@ const runMigrations = (database) => {
   if (!userColumns.has('vet_phone')) {
     database.run('ALTER TABLE users ADD COLUMN vet_phone TEXT');
   }
+  // New columns for SMS check-in
+  if (!userColumns.has('phone_number')) {
+    database.run('ALTER TABLE users ADD COLUMN phone_number TEXT');
+  }
+  if (!userColumns.has('sms_checkin_enabled')) {
+    database.run('ALTER TABLE users ADD COLUMN sms_checkin_enabled INTEGER DEFAULT 0');
+  }
 
   // Get existing columns for check_ins table
   const checkInColumns = new Set();
@@ -72,6 +80,9 @@ const runMigrations = (database) => {
   if (!checkInColumns.has('longitude')) {
     database.run('ALTER TABLE check_ins ADD COLUMN longitude REAL');
   }
+
+  // Migrate existing contact data to emergency_contacts table (if not already migrated)
+  migrateExistingContacts(database);
 };
 
 // Initialize database
@@ -136,6 +147,53 @@ const initDb = async () => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_check_ins_user_id ON check_ins(user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_token ON family_shares(share_token)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_user_id ON family_shares(user_id)`);
+
+  // Feature 1: Emergency Contacts table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS emergency_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      alert_preference TEXT DEFAULT 'email',
+      priority INTEGER DEFAULT 1,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_emergency_contacts_user_id ON emergency_contacts(user_id)`);
+
+  // Feature 3: API Keys table for Smart Home Integration
+  db.run(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      api_key TEXT UNIQUE NOT NULL,
+      label TEXT,
+      is_active INTEGER DEFAULT 1,
+      last_used_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys(api_key)`);
+
+  // Feature 3: External check-ins audit log
+  db.run(`
+    CREATE TABLE IF NOT EXISTS external_checkins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      api_key_id INTEGER,
+      source TEXT,
+      ip_address TEXT,
+      checked_in_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_external_checkins_user_id ON external_checkins(user_id)`);
 
   // Run migrations for existing databases
   runMigrations(db);
@@ -206,6 +264,8 @@ export const getUser = async (id) => {
     alertPreference: row.alert_preference,
     locationSharingEnabled: !!row.location_sharing_enabled,
     proofOfLifeEnabled: !!row.proof_of_life_enabled,
+    phoneNumber: row.phone_number,
+    smsCheckinEnabled: !!row.sms_checkin_enabled,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -287,6 +347,14 @@ export const updateUser = async (id, updates) => {
   if (updates.vetPhone !== undefined) {
     fields.push('vet_phone = ?');
     values.push(updates.vetPhone);
+  }
+  if (updates.phoneNumber !== undefined) {
+    fields.push('phone_number = ?');
+    values.push(updates.phoneNumber);
+  }
+  if (updates.smsCheckinEnabled !== undefined) {
+    fields.push('sms_checkin_enabled = ?');
+    values.push(updates.smsCheckinEnabled ? 1 : 0);
   }
 
   if (fields.length === 0) return getUser(id);
@@ -541,6 +609,383 @@ export const getCheckInHistory = async (userId, days = 7) => {
   stmt.free();
 
   return checkIns;
+};
+
+// Migrate existing contact data from users table to emergency_contacts table
+const migrateExistingContacts = (database) => {
+  // Check if there are users with contact_email that don't have emergency contacts
+  const stmt = database.prepare(`
+    SELECT u.id, u.contact_name, u.contact_email, u.contact_phone, u.alert_preference
+    FROM users u
+    WHERE u.contact_email IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM emergency_contacts ec WHERE ec.user_id = u.id
+    )
+  `);
+
+  const usersToMigrate = [];
+  while (stmt.step()) {
+    usersToMigrate.push(stmt.getAsObject());
+  }
+  stmt.free();
+
+  // Migrate each user's contact
+  for (const user of usersToMigrate) {
+    if (user.contact_email) {
+      database.run(`
+        INSERT INTO emergency_contacts (user_id, name, email, phone, alert_preference, priority, is_active)
+        VALUES (?, ?, ?, ?, ?, 1, 1)
+      `, [
+        user.id,
+        user.contact_name || 'Emergency Contact',
+        user.contact_email,
+        user.contact_phone || null,
+        user.alert_preference || 'email'
+      ]);
+      console.log(`[Migration] Migrated contact for user ${user.id}`);
+    }
+  }
+};
+
+// ==========================================
+// Feature 1: Emergency Contacts CRUD
+// ==========================================
+
+export const getEmergencyContacts = async (userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM emergency_contacts
+    WHERE user_id = ? AND is_active = 1
+    ORDER BY priority ASC, created_at ASC
+  `);
+  stmt.bind([userId]);
+
+  const contacts = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    contacts.push({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      alertPreference: row.alert_preference,
+      priority: row.priority,
+      isActive: !!row.is_active,
+      createdAt: row.created_at
+    });
+  }
+  stmt.free();
+
+  return contacts;
+};
+
+export const createEmergencyContact = async (userId, contact) => {
+  const database = await getDb();
+
+  // Check if user already has 5 contacts
+  const countStmt = database.prepare(
+    'SELECT COUNT(*) as count FROM emergency_contacts WHERE user_id = ? AND is_active = 1'
+  );
+  countStmt.bind([userId]);
+  countStmt.step();
+  const count = countStmt.getAsObject().count;
+  countStmt.free();
+
+  if (count >= 5) {
+    throw new Error('Maximum of 5 emergency contacts allowed');
+  }
+
+  // Get next priority
+  const priorityStmt = database.prepare(
+    'SELECT COALESCE(MAX(priority), 0) + 1 as next_priority FROM emergency_contacts WHERE user_id = ?'
+  );
+  priorityStmt.bind([userId]);
+  priorityStmt.step();
+  const nextPriority = priorityStmt.getAsObject().next_priority;
+  priorityStmt.free();
+
+  database.run(`
+    INSERT INTO emergency_contacts (user_id, name, email, phone, alert_preference, priority)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `, [
+    userId,
+    contact.name,
+    contact.email || null,
+    contact.phone || null,
+    contact.alertPreference || 'email',
+    nextPriority
+  ]);
+
+  saveDb();
+
+  // Get the inserted contact
+  const idStmt = database.prepare('SELECT last_insert_rowid() as id');
+  idStmt.step();
+  const newId = idStmt.getAsObject().id;
+  idStmt.free();
+
+  return getEmergencyContactById(newId);
+};
+
+export const getEmergencyContactById = async (contactId) => {
+  const database = await getDb();
+  const stmt = database.prepare('SELECT * FROM emergency_contacts WHERE id = ?');
+  stmt.bind([contactId]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    alertPreference: row.alert_preference,
+    priority: row.priority,
+    isActive: !!row.is_active,
+    createdAt: row.created_at
+  };
+};
+
+export const updateEmergencyContact = async (contactId, userId, updates) => {
+  const database = await getDb();
+  const fields = [];
+  const values = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.email !== undefined) {
+    fields.push('email = ?');
+    values.push(updates.email);
+  }
+  if (updates.phone !== undefined) {
+    fields.push('phone = ?');
+    values.push(updates.phone);
+  }
+  if (updates.alertPreference !== undefined) {
+    fields.push('alert_preference = ?');
+    values.push(updates.alertPreference);
+  }
+  if (updates.priority !== undefined) {
+    fields.push('priority = ?');
+    values.push(updates.priority);
+  }
+
+  if (fields.length === 0) return getEmergencyContactById(contactId);
+
+  values.push(contactId, userId);
+
+  database.run(
+    `UPDATE emergency_contacts SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
+    values
+  );
+  saveDb();
+
+  return getEmergencyContactById(contactId);
+};
+
+export const deleteEmergencyContact = async (contactId, userId) => {
+  const database = await getDb();
+
+  // Soft delete
+  database.run(
+    'UPDATE emergency_contacts SET is_active = 0 WHERE id = ? AND user_id = ?',
+    [contactId, userId]
+  );
+  saveDb();
+
+  return { success: true };
+};
+
+// ==========================================
+// Feature 2: SMS Check-in User Lookup
+// ==========================================
+
+export const getUserByPhoneNumber = async (phoneNumber) => {
+  const database = await getDb();
+
+  // Normalize phone number - strip all non-digits
+  const normalized = phoneNumber.replace(/\D/g, '');
+
+  // Try to match with various formats
+  const stmt = database.prepare(`
+    SELECT * FROM users
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(phone_number, '+', ''), '-', ''), ' ', ''), '(', '') LIKE ?
+    AND sms_checkin_enabled = 1
+  `);
+  stmt.bind(['%' + normalized.slice(-10)]); // Match last 10 digits
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return {
+    id: row.id,
+    name: row.name,
+    contactName: row.contact_name,
+    contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
+    phoneNumber: row.phone_number,
+    smsCheckinEnabled: !!row.sms_checkin_enabled,
+    petName: row.pet_name,
+    petNotes: row.pet_notes,
+    petEmoji: row.pet_emoji,
+    streak: row.streak,
+    lastCheckIn: row.last_check_in
+  };
+};
+
+// ==========================================
+// Feature 3: API Keys for Smart Home
+// ==========================================
+
+export const generateApiKey = async (userId, label = null) => {
+  const database = await getDb();
+
+  // Generate a secure 32-byte API key
+  const apiKey = crypto.randomBytes(32).toString('hex');
+
+  database.run(`
+    INSERT INTO api_keys (user_id, api_key, label)
+    VALUES (?, ?, ?)
+  `, [userId, apiKey, label]);
+
+  saveDb();
+
+  // Get the inserted key
+  const stmt = database.prepare('SELECT * FROM api_keys WHERE api_key = ?');
+  stmt.bind([apiKey]);
+  stmt.step();
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    apiKey: row.api_key, // Only returned on creation!
+    label: row.label,
+    isActive: !!row.is_active,
+    createdAt: row.created_at
+  };
+};
+
+export const getApiKeys = async (userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT id, user_id, label, is_active, last_used_at, created_at,
+           SUBSTR(api_key, 1, 8) || '...' as key_preview
+    FROM api_keys
+    WHERE user_id = ? AND is_active = 1
+    ORDER BY created_at DESC
+  `);
+  stmt.bind([userId]);
+
+  const keys = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    keys.push({
+      id: row.id,
+      userId: row.user_id,
+      keyPreview: row.key_preview,
+      label: row.label,
+      isActive: !!row.is_active,
+      lastUsedAt: row.last_used_at,
+      createdAt: row.created_at
+    });
+  }
+  stmt.free();
+
+  return keys;
+};
+
+export const validateApiKey = async (apiKey) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT ak.*, u.id as uid, u.name
+    FROM api_keys ak
+    JOIN users u ON ak.user_id = u.id
+    WHERE ak.api_key = ? AND ak.is_active = 1
+  `);
+  stmt.bind([apiKey]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  // Update last_used_at
+  database.run(
+    "UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?",
+    [row.id]
+  );
+  saveDb();
+
+  return {
+    keyId: row.id,
+    userId: row.user_id,
+    userName: row.name,
+    label: row.label
+  };
+};
+
+export const revokeApiKey = async (keyId, userId) => {
+  const database = await getDb();
+
+  database.run(
+    'UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_id = ?',
+    [keyId, userId]
+  );
+  saveDb();
+
+  return { success: true };
+};
+
+export const logExternalCheckIn = async (userId, apiKeyId, source, ipAddress) => {
+  const database = await getDb();
+
+  database.run(`
+    INSERT INTO external_checkins (user_id, api_key_id, source, ip_address)
+    VALUES (?, ?, ?, ?)
+  `, [userId, apiKeyId, source, ipAddress]);
+
+  saveDb();
+};
+
+export const getLastExternalCheckIn = async (apiKeyId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT checked_in_at FROM external_checkins
+    WHERE api_key_id = ?
+    ORDER BY checked_in_at DESC
+    LIMIT 1
+  `);
+  stmt.bind([apiKeyId]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return row.checked_in_at;
 };
 
 // Initialize on import

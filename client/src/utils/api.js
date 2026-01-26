@@ -214,6 +214,65 @@ export const api = {
       method: 'DELETE'
     });
     return handleResponse(response);
+  },
+
+  // Emergency Contacts endpoints
+  getContacts: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/contacts/${userId}`);
+    return handleResponse(response);
+  },
+
+  createContact: async (userId, contactData) => {
+    const response = await fetchWithRetry(`${API_BASE}/contacts/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contactData)
+    });
+    return handleResponse(response);
+  },
+
+  updateContact: async (userId, contactId, contactData) => {
+    const response = await fetchWithRetry(`${API_BASE}/contacts/${userId}/${contactId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contactData)
+    });
+    return handleResponse(response);
+  },
+
+  deleteContact: async (userId, contactId) => {
+    const response = await fetchWithRetry(`${API_BASE}/contacts/${userId}/${contactId}`, {
+      method: 'DELETE'
+    });
+    return handleResponse(response);
+  },
+
+  // SMS Check-in endpoints
+  getSmsStatus: async () => {
+    const response = await fetchWithRetry(`${API_BASE}/sms/status`);
+    return handleResponse(response);
+  },
+
+  // Smart Home / API Key endpoints
+  getApiKeys: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/keys/${userId}`);
+    return handleResponse(response);
+  },
+
+  createApiKey: async (userId, label = null) => {
+    const response = await fetchWithRetry(`${API_BASE}/keys/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label })
+    });
+    return handleResponse(response);
+  },
+
+  revokeApiKey: async (userId, keyId) => {
+    const response = await fetchWithRetry(`${API_BASE}/keys/${userId}/${keyId}`, {
+      method: 'DELETE'
+    });
+    return handleResponse(response);
   }
 };
 

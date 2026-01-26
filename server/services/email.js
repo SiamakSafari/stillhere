@@ -153,6 +153,54 @@ export const sendAlert = async (user, isTest = false, location = null) => {
   }
 };
 
+// Send alert to a specific emergency contact
+export const sendAlertToContact = async (user, contact, isTest = false, location = null) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('SendGrid API key not configured - email not sent');
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  if (!contact.email) {
+    return { success: false, error: 'Contact has no email' };
+  }
+
+  // Create a user-like object with contact info for the email template
+  const userWithContact = {
+    ...user,
+    contactName: contact.name,
+    contactEmail: contact.email
+  };
+
+  // Create confirmation token and URL for non-test alerts
+  let confirmationUrl = null;
+  if (!isTest) {
+    try {
+      const token = await createConfirmationToken(user.id, 'email');
+      confirmationUrl = getConfirmationUrl(token);
+    } catch (error) {
+      console.error('Failed to create confirmation token:', error);
+    }
+  }
+
+  const msg = {
+    to: contact.email,
+    from: FROM_EMAIL,
+    subject: isTest
+      ? `Still Here Test Alert: ${user.name}`
+      : `Still Here Alert: ${user.name} hasn't checked in`,
+    html: buildAlertEmail(userWithContact, isTest, location, confirmationUrl)
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Alert email sent to ${contact.email} (${contact.name}) for user ${user.name}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to send alert email to ${contact.email}:`, error);
+    return { success: false, error: error.message };
+  }
+};
+
 export const sendReminder = async (user) => {
   if (!process.env.SENDGRID_API_KEY) {
     console.warn('SendGrid API key not configured - reminder not sent');
@@ -209,6 +257,71 @@ export const sendReminder = async (user) => {
     return { success: true };
   } catch (error) {
     console.error('Failed to send reminder email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send reminder to a specific emergency contact
+export const sendReminderToContact = async (user, contact) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('SendGrid API key not configured - reminder not sent');
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  if (!contact.email) {
+    return { success: false, error: 'Contact has no email' };
+  }
+
+  const msg = {
+    to: contact.email,
+    from: FROM_EMAIL,
+    subject: `Still Here Reminder: ${user.name} hasn't checked in today`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Courier New', monospace;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <div style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 40px; border: 1px solid #374151;">
+
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="width: 60px; height: 60px; background: #fbbf24; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 30px;">⏰</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">
+                Reminder
+              </h1>
+            </div>
+
+            <p style="color: #e5e7eb; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Hi ${contact.name},
+            </p>
+
+            <p style="color: #e5e7eb; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              <strong>${user.name}</strong> hasn't checked in on Still Here today. This is just a heads up - we'll send a full alert if they don't check in within the next 24 hours.
+            </p>
+
+            <div style="border-top: 1px solid #374151; margin-top: 30px; padding-top: 20px;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                Still Here is a daily check-in app for peace of mind.
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Reminder email sent to ${contact.email} (${contact.name}) for user ${user.name}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to send reminder email to ${contact.email}:`, error);
     return { success: false, error: error.message };
   }
 };

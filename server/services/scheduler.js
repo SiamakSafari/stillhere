@@ -1,7 +1,7 @@
 import cron from 'node-cron';
-import { getUsersNeedingReminder, getLastCheckInLocation } from '../db/database.js';
-import { sendAlert, sendReminder } from './email.js';
-import { sendAlertSMS, isSMSConfigured } from './sms.js';
+import { getUsersNeedingReminder, getLastCheckInLocation, getEmergencyContacts } from '../db/database.js';
+import { sendAlertToContact, sendReminderToContact } from './email.js';
+import { sendAlertSMSToContact, isSMSConfigured } from './sms.js';
 import { sendReminderPush } from './push.js';
 
 // Track which users have received reminders/alerts to avoid duplicates
@@ -58,26 +58,42 @@ const checkMissedCheckIns = async () => {
         if (!sentAlerts.has(alertKey)) {
           console.log(`[Scheduler] Sending alert for user ${user.name} (${hoursSinceCheckIn.toFixed(1)}h since check-in)`);
 
-          const alertPref = user.alertPreference || 'email';
-
           // Get last known location if location sharing is enabled
           let location = null;
           if (user.locationSharingEnabled) {
             location = await getLastCheckInLocation(user.id);
           }
 
-          // Send email alert
-          if (alertPref === 'email' || alertPref === 'both') {
-            await sendAlert(user, false, location);
+          // Get all emergency contacts for this user
+          const contacts = await getEmergencyContacts(user.id);
+
+          // If no contacts in new table, fall back to legacy contact
+          if (contacts.length === 0 && user.contactEmail) {
+            contacts.push({
+              name: user.contactName,
+              email: user.contactEmail,
+              phone: user.contactPhone,
+              alertPreference: user.alertPreference || 'email'
+            });
           }
 
-          // Send SMS alert
-          if ((alertPref === 'sms' || alertPref === 'both') && isSMSConfigured()) {
-            await sendAlertSMS(user, {
-              includeLocation: !!location,
-              latitude: location?.latitude,
-              longitude: location?.longitude
-            });
+          // Send alerts to each contact based on their preferences
+          for (const contact of contacts) {
+            const alertPref = contact.alertPreference || 'email';
+
+            // Send email alert
+            if ((alertPref === 'email' || alertPref === 'both') && contact.email) {
+              await sendAlertToContact(user, contact, false, location);
+            }
+
+            // Send SMS alert
+            if ((alertPref === 'sms' || alertPref === 'both') && contact.phone && isSMSConfigured()) {
+              await sendAlertSMSToContact(user, contact, {
+                includeLocation: !!location,
+                latitude: location?.latitude,
+                longitude: location?.longitude
+              });
+            }
           }
 
           sentAlerts.add(alertKey);
@@ -85,7 +101,26 @@ const checkMissedCheckIns = async () => {
       } else if (hoursSinceCheckIn >= 24 && pastWindow) {
         // Only send reminder if past user's check-in window
         console.log(`[Scheduler] Sending reminder for user ${user.name} (${hoursSinceCheckIn.toFixed(1)}h since check-in, past window)`);
-        await sendReminder(user);
+
+        // Get all emergency contacts for this user
+        const contacts = await getEmergencyContacts(user.id);
+
+        // If no contacts in new table, fall back to legacy contact
+        if (contacts.length === 0 && user.contactEmail) {
+          contacts.push({
+            name: user.contactName,
+            email: user.contactEmail,
+            phone: user.contactPhone,
+            alertPreference: user.alertPreference || 'email'
+          });
+        }
+
+        // Send reminders to each contact (email only for reminders)
+        for (const contact of contacts) {
+          if (contact.email) {
+            await sendReminderToContact(user, contact);
+          }
+        }
 
         // Also try to send push notification reminder
         try {

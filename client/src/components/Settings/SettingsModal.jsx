@@ -12,6 +12,9 @@ import { PetCard } from './PetCard';
 import { ProofOfLife } from './ProofOfLife';
 import { ShareLinkManager } from './ShareLinkManager';
 import { MemberBadge } from './MemberBadge';
+import { EmergencyContacts } from './EmergencyContacts';
+import { SmsCheckIn } from './SmsCheckIn';
+import { SmartHomeIntegration } from './SmartHomeIntegration';
 import { exportData, importData } from '../../utils/storage';
 import { api } from '../../utils/api';
 import styles from './Settings.module.css';
@@ -172,6 +175,12 @@ export const SettingsModal = ({ data, updateData, onClose, onReset }) => {
           <NotificationSettings data={data} updateData={updateData} />
 
           <AlertPreferences data={data} updateData={updateData} />
+
+          <EmergencyContacts data={data} />
+
+          <SmsCheckIn data={data} updateData={updateData} />
+
+          <SmartHomeIntegration data={data} />
 
           <LocationSettings data={data} updateData={updateData} />
 
