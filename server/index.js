@@ -9,6 +9,9 @@ import notificationsRouter from './routes/notifications.js';
 import confirmationsRouter, { initConfirmationsTable } from './routes/confirmations.js';
 import activitiesRouter from './routes/activities.js';
 import familyRouter from './routes/family.js';
+import contactsRouter from './routes/contacts.js';
+import smsWebhookRouter from './routes/sms-webhook.js';
+import externalRouter from './routes/external.js';
 import { startScheduler } from './services/scheduler.js';
 import { initPushTable } from './services/push.js';
 
@@ -83,6 +86,9 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/confirmations', confirmationsRouter);
 app.use('/api/activity', activitiesRouter);
 app.use('/api/family', familyRouter);
+app.use('/api/contacts', contactsRouter);
+app.use('/api/sms', smsWebhookRouter);
+app.use('/api', externalRouter); // External check-in + API key management
 
 // Sentry error handler must be before any other error middleware
 if (process.env.SENTRY_DSN) {

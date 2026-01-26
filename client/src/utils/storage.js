@@ -63,7 +63,10 @@ const defaultData = {
   alertPreference: 'email',
   pushEnabled: false,
   // Location settings
-  locationSharingEnabled: false
+  locationSharingEnabled: false,
+  // SMS Check-in settings
+  phoneNumber: null,
+  smsCheckinEnabled: false
 };
 
 export const getStoredData = () => {

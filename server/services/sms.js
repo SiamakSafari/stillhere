@@ -43,7 +43,7 @@ export const sendSMS = async (to, body) => {
   }
 };
 
-// Send alert SMS to emergency contact
+// Send alert SMS to emergency contact (legacy)
 export const sendAlertSMS = async (user, options = {}) => {
   if (!user.contactPhone) {
     return { success: false, error: 'No contact phone number' };
@@ -69,6 +69,38 @@ export const sendAlertSMS = async (user, options = {}) => {
   }
 
   return sendSMS(user.contactPhone, message);
+};
+
+// Send alert SMS to a specific emergency contact
+export const sendAlertSMSToContact = async (user, contact, options = {}) => {
+  if (!contact.phone) {
+    return { success: false, error: 'Contact has no phone number' };
+  }
+
+  const { isTest = false, includeLocation = false, latitude, longitude } = options;
+
+  let message = isTest
+    ? `[TEST] Still Here Alert: This is a test alert. ${user.name} has set you as their emergency contact.`
+    : `Still Here Alert: ${user.name} hasn't checked in for over 48 hours. You may want to reach out to make sure they're okay.`;
+
+  // Add pet info if available
+  if (user.petName && !isTest) {
+    message += `\n\nPet: ${user.petEmoji || ''} ${user.petName}`;
+    if (user.petNotes) {
+      message += ` - ${user.petNotes}`;
+    }
+  }
+
+  // Add location if available
+  if (includeLocation && latitude && longitude) {
+    message += `\n\nLast known location: https://maps.google.com/?q=${latitude},${longitude}`;
+  }
+
+  const result = await sendSMS(contact.phone, message);
+  if (result.success) {
+    console.log(`[SMS] Alert sent to ${contact.name} (${contact.phone}) for user ${user.name}`);
+  }
+  return result;
 };
 
 // Send reminder SMS to user (optional feature)
