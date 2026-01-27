@@ -4,12 +4,14 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Onboarding } from './components/Onboarding';
 import { MainScreen } from './components/MainScreen';
 import { FamilyDashboard } from './pages/FamilyDashboard';
+import { Paywall } from './components/Paywall';
 import { ToastProvider } from './context/ToastContext';
 import { ToastContainer } from './components/common/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { syncToServer, api } from './utils/api';
 import { syncWidget } from './plugins/WidgetBridge';
 import { initializeNotifications, scheduleDailyReminders, scheduleStreakWarning } from './services/notifications';
+import { initializePurchases, checkSubscriptionStatus, setUserId } from './services/purchases';
 
 // Parse current route from URL
 const parseRoute = () => {
@@ -77,14 +79,52 @@ const applyAccentColor = (color, customColor) => {
 function App() {
   const { data, updateData, resetData, isLoading } = useLocalStorage();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Parse route on mount
   const route = useMemo(() => parseRoute(), []);
 
-  // If this is a family dashboard route, render it directly
+  // If this is a family dashboard route, render it directly (no paywall)
   if (route.type === 'family') {
     return <FamilyDashboard token={route.token} />;
   }
+
+  // Initialize RevenueCat and check subscription on mount
+  useEffect(() => {
+    const checkSubscription = async () => {
+      setIsCheckingSubscription(true);
+      
+      // Initialize RevenueCat
+      await initializePurchases(data.userId);
+      
+      // Check if user is subscribed
+      const status = await checkSubscriptionStatus();
+      setIsSubscribed(status.isSubscribed);
+      
+      // Store subscription status locally
+      if (status.isSubscribed !== data.isSubscribed) {
+        updateData({ isSubscribed: status.isSubscribed });
+      }
+      
+      setIsCheckingSubscription(false);
+    };
+
+    checkSubscription();
+  }, []);
+
+  // Set user ID in RevenueCat after onboarding
+  useEffect(() => {
+    if (data.userId) {
+      setUserId(data.userId);
+    }
+  }, [data.userId]);
+
+  // Handle successful subscription
+  const handleSubscribed = () => {
+    setIsSubscribed(true);
+    updateData({ isSubscribed: true });
+  };
 
   // Apply theme on load and when it changes
   useEffect(() => {
@@ -247,7 +287,7 @@ function App() {
   };
 
   // Show loading state briefly
-  if (isLoading) {
+  if (isLoading || isCheckingSubscription) {
     return (
       <div
         style={{
@@ -270,6 +310,11 @@ function App() {
         />
       </div>
     );
+  }
+
+  // Show paywall if not subscribed
+  if (!isSubscribed) {
+    return <Paywall onSubscribed={handleSubscribed} />;
   }
 
   // Show onboarding if not complete
