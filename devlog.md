@@ -2880,4 +2880,277 @@ curl -X POST https://stillhere.app/api/checkin/external \
 
 ---
 
-*Last updated: 2026-01-26*
+## 2026-01-27: Security Hardening, Snooze Alerts, Toast Notifications, Export Data
+
+### Overview
+
+Comprehensive enhancement implementing critical security fixes, new UI features, and improved user experience. Focused on Phase 1 (Critical Fixes), Phase 2 (Quick Wins), and Phase 3 (New Features) from the enhancement plan.
+
+---
+
+### Phase 1: Critical Fixes
+
+#### 1.1 Missing Database Functions
+
+**Problem:** Routes were importing functions that didn't exist in `database.js`.
+
+**Files Modified:**
+- `server/db/database.js` - Added ~400 lines of new code
+
+**New Tables:**
+```sql
+-- Emergency contacts table
+emergency_contacts (
+  id, user_id, name, email, phone,
+  alert_preference, priority, is_active,
+  created_at, updated_at
+)
+
+-- API keys table (for smart home integration)
+api_keys (
+  id, user_id, key_hash, key_prefix, label,
+  last_used_at, is_active, created_at
+)
+
+-- External check-ins audit table
+external_checkins (
+  id, user_id, key_id, source, ip_address, created_at
+)
+```
+
+**New Functions Added:**
+- `getEmergencyContacts(userId)` - List user's emergency contacts
+- `createEmergencyContact(userId, contact)` - Add new contact
+- `updateEmergencyContact(contactId, userId, updates)` - Update contact
+- `deleteEmergencyContact(contactId, userId)` - Remove contact
+- `generateApiKey(userId, label)` - Create API key with SHA-256 hash
+- `validateApiKey(key)` - Verify API key and return user data
+- `getApiKeys(userId)` - List user's API keys (prefix only)
+- `revokeApiKey(keyId, userId)` - Deactivate API key
+- `logExternalCheckIn(userId, keyId, source, ipAddress)` - Audit log
+- `getLastExternalCheckIn(keyId)` - For rate limiting
+- `getUserByPhoneNumber(phone)` - For SMS check-in lookup
+
+**Migration Added:**
+- `snooze_until` column for users table
+
+#### 1.2 Auth Middleware on Contacts Routes
+
+**Files Modified:**
+- `server/routes/contacts.js` - Added authentication
+
+**Changes:**
+```javascript
+// Before
+router.get('/:userId', async (req, res) => { ... });
+
+// After
+router.get('/:userId',
+  validateUUIDParam('userId'),
+  authenticate,
+  authorizeUser('userId'),
+  async (req, res) => { ... }
+);
+```
+
+All CRUD routes now require valid auth token.
+
+#### 1.3 CORS Configuration Fixed
+
+**Files Modified:**
+- `server/index.js` - Restricted CORS origins
+
+**Changes:**
+```javascript
+const allowedOrigins = [
+  config.appUrl,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
+  'http://localhost:3004',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  // ... etc
+];
+```
+
+Requests from non-allowed origins are now blocked with proper error message.
+
+#### 1.4 Security Headers (Helmet.js)
+
+**Files Modified:**
+- `server/index.js` - Added helmet middleware
+- `server/package.json` - Added helmet dependency
+
+**Headers Added:**
+- Content-Security-Policy
+- X-Frame-Options: SAMEORIGIN
+- X-Content-Type-Options: nosniff
+- Strict-Transport-Security
+- Cross-Origin-Opener-Policy
+- And more...
+
+#### 1.5 Rate Limiting
+
+**Files Modified:**
+- `server/index.js` - Added express-rate-limit
+- `server/package.json` - Added express-rate-limit dependency
+
+**Configuration:**
+- Default: 100 requests per 15 minutes per IP
+- Health checks exempt from limiting
+- Returns standard 429 with retry-after header
+
+---
+
+### Phase 2: Quick Wins
+
+#### 2.1 New Sound Effects
+
+**Files Modified:**
+- `client/src/utils/sounds.js` - Added playClick, playError, playSuccess
+- `client/scripts/generate-sounds.js` - Added sound generators
+
+**New Sounds:**
+- `click.wav` - Subtle UI feedback (short, soft)
+- `error.wav` - Error notification (descending tone)
+- `success.wav` - Success confirmation (ascending tone)
+
+---
+
+### Phase 3: New Features
+
+#### 3.1 Snooze Alerts
+
+**Files Created:**
+- `client/src/components/MainScreen/SnoozeButton.jsx`
+- `client/src/components/MainScreen/SnoozeButton.module.css`
+
+**Files Modified:**
+- `client/src/components/MainScreen/index.jsx` - Integrated SnoozeButton
+- `client/src/components/MainScreen/MainScreen.module.css` - Snooze styling
+- `client/src/utils/api.js` - Added snoozeAlerts, cancelSnooze functions
+- `server/routes/users.js` - Added POST/DELETE /:id/snooze endpoints
+- `server/middleware/validate.js` - Added validateSnooze middleware
+
+**Features:**
+- Dropdown with 1, 2, 4, 8, 24 hour options
+- Shows snooze end time when active
+- Cancel button to clear snooze
+- Prevents alert notifications during snooze period
+
+#### 3.2 Toast Notifications
+
+**Files Created:**
+- `client/src/context/ToastContext.jsx` - Global toast state
+- `client/src/components/common/Toast.jsx` - Toast component
+- `client/src/components/common/Toast.module.css` - Toast styling
+
+**Files Modified:**
+- `client/src/App.jsx` - Added ToastProvider wrapper
+
+**Features:**
+- Auto-dismiss after 4 seconds
+- Manual dismiss button
+- Types: success (green), error (red), warning (yellow), info (blue)
+- Slide-in/out animations
+- Accessible with role="alert"
+
+**Usage:**
+```javascript
+const { success, error, warning, info } = useToast();
+success('Check-in recorded!');
+error('Failed to save');
+```
+
+#### 3.3 Export Data (CSV)
+
+**Files Created:**
+- `client/src/components/Settings/ExportData.jsx`
+- `server/routes/export.js`
+
+**Files Modified:**
+- `client/src/components/Settings/SettingsModal.jsx` - Added ExportData section
+- `client/src/components/Settings/Settings.module.css` - Export styling
+- `client/src/utils/api.js` - Added exportCheckIns, exportAccountSummary
+
+**Features:**
+- Time range selector: Last 30/90 days, 6 months, year, all time
+- Download as CSV with date, mood, note, location
+- Account summary export option
+- Server generates CSV with proper escaping
+
+#### 3.4 Input Validation
+
+**Files Modified:**
+- `server/middleware/validate.js` - Added new validators
+
+**New Validators:**
+- `validateEmergencyContact` - Name, email format, phone format, priority
+- `validateSnooze` - Hours must be 1-24
+
+---
+
+### Testing Results
+
+Browser testing confirmed all features working:
+
+| Feature | Status |
+|---------|--------|
+| Snooze Alerts | ✅ Working |
+| Toast Notifications | ✅ Working |
+| Export Data UI | ✅ Present |
+| Check-in Flow | ✅ Working |
+| CORS Configuration | ✅ Fixed |
+
+---
+
+### Files Changed Summary
+
+**Modified (17 files):**
+- `.claude/settings.local.json`
+- `client/scripts/generate-sounds.js` (+73 lines)
+- `client/src/App.jsx` (+7 lines)
+- `client/src/components/MainScreen/MainScreen.module.css` (+7 lines)
+- `client/src/components/MainScreen/index.jsx` (+24 lines)
+- `client/src/components/Settings/Settings.module.css` (+26 lines)
+- `client/src/components/Settings/SettingsModal.jsx` (+3 lines)
+- `client/src/utils/api.js` (+28 lines)
+- `client/src/utils/sounds.js` (+38 lines)
+- `server/db/database.js` (+411 lines)
+- `server/index.js` (+80 lines)
+- `server/middleware/validate.js` (+89 lines)
+- `server/package.json` (+2 deps)
+- `server/routes/contacts.js` (+18 lines)
+- `server/routes/external.js` (+8 lines)
+- `server/routes/users.js` (+60 lines)
+
+**Created (11 files):**
+- `client/public/sounds/click.wav`
+- `client/public/sounds/error.wav`
+- `client/public/sounds/success.wav`
+- `client/src/components/MainScreen/SnoozeButton.jsx`
+- `client/src/components/MainScreen/SnoozeButton.module.css`
+- `client/src/components/Settings/ExportData.jsx`
+- `client/src/components/common/Toast.jsx`
+- `client/src/components/common/Toast.module.css`
+- `client/src/context/ToastContext.jsx`
+- `server/routes/export.js`
+
+---
+
+### Lessons Learned
+
+1. **CORS in Development** - When Vite dev server runs on a different port than expected (3004 instead of 3000), CORS will block requests. Solution: Add a range of common dev ports to allowed origins.
+
+2. **Database Migrations** - Always run migrations before creating indexes on new columns. The index creation will fail if the column doesn't exist yet.
+
+3. **Auth Token Persistence** - When backend creates user, the auth token must be stored by the frontend. If user creation fails on the frontend but succeeds on backend (via curl), the token mismatch causes auth failures.
+
+4. **API Key Security** - Using SHA-256 hash for API keys means you can never show the full key again after creation. Make sure to show it once and warn users to save it.
+
+---
+
+*Last updated: 2026-01-27*

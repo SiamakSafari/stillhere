@@ -57,6 +57,9 @@ const runMigrations = (database) => {
   if (!userColumns.has('auth_token')) {
     database.run('ALTER TABLE users ADD COLUMN auth_token TEXT');
   }
+  if (!userColumns.has('snooze_until')) {
+    database.run('ALTER TABLE users ADD COLUMN snooze_until TEXT');
+  }
 
   // Get existing columns for check_ins table
   const checkInColumns = new Set();
@@ -78,6 +81,62 @@ const runMigrations = (database) => {
   if (!checkInColumns.has('longitude')) {
     database.run('ALTER TABLE check_ins ADD COLUMN longitude REAL');
   }
+};
+
+// Create emergency_contacts table
+const createEmergencyContactsTable = (database) => {
+  database.run(`
+    CREATE TABLE IF NOT EXISTS emergency_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      alert_preference TEXT DEFAULT 'email',
+      priority INTEGER DEFAULT 1,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_emergency_contacts_user_id ON emergency_contacts(user_id)`);
+};
+
+// Create api_keys table
+const createApiKeysTable = (database) => {
+  database.run(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      key_hash TEXT NOT NULL,
+      key_prefix TEXT NOT NULL,
+      label TEXT,
+      last_used_at TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)`);
+};
+
+// Create external_checkins audit table
+const createExternalCheckinsTable = (database) => {
+  database.run(`
+    CREATE TABLE IF NOT EXISTS external_checkins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      key_id INTEGER NOT NULL,
+      source TEXT,
+      ip_address TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (key_id) REFERENCES api_keys(id)
+    )
+  `);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_external_checkins_key_id ON external_checkins(key_id)`);
 };
 
 // Initialize database
@@ -161,6 +220,19 @@ const initDb = async () => {
     )
   `);
 
+  // Run migrations for existing databases BEFORE creating indexes on migrated columns
+  runMigrations(db);
+
+  // Create emergency contacts table
+  createEmergencyContactsTable(db);
+
+  // Create API keys table
+  createApiKeysTable(db);
+
+  // Create external check-ins audit table
+  createExternalCheckinsTable(db);
+
+  // Create indexes (after migrations have added any needed columns)
   db.run(`CREATE INDEX IF NOT EXISTS idx_users_last_check_in ON users(last_check_in)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_users_auth_token ON users(auth_token)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_check_ins_user_id ON check_ins(user_id)`);
@@ -168,9 +240,6 @@ const initDb = async () => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_family_shares_user_id ON family_shares(user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status)`);
-
-  // Run migrations for existing databases
-  runMigrations(db);
 
   saveDb();
   return db;
@@ -236,6 +305,7 @@ export const getUser = async (id) => {
     streak: row.streak,
     lastCheckIn: row.last_check_in,
     vacationUntil: row.vacation_until,
+    snoozeUntil: row.snooze_until,
     checkInWindowStart: row.check_in_window_start,
     checkInWindowEnd: row.check_in_window_end,
     timezone: row.timezone || 'UTC',
@@ -251,10 +321,32 @@ export const getUser = async (id) => {
 // Get user by auth token
 export const getUserByAuthToken = async (token) => {
   if (!token) return null;
-  
+
   const database = await getDb();
   const stmt = database.prepare('SELECT id FROM users WHERE auth_token = ?');
   stmt.bind([token]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return getUser(row.id);
+};
+
+// Get user by phone number (for SMS check-in)
+export const getUserByPhoneNumber = async (phone) => {
+  if (!phone) return null;
+
+  // Normalize phone number (remove spaces, dashes, etc.)
+  const normalizedPhone = phone.replace(/[\s\-()]/g, '');
+
+  const database = await getDb();
+  const stmt = database.prepare('SELECT id FROM users WHERE REPLACE(REPLACE(REPLACE(contact_phone, " ", ""), "-", ""), "(", "") LIKE ?');
+  stmt.bind([`%${normalizedPhone.slice(-10)}`]); // Match last 10 digits
 
   if (!stmt.step()) {
     stmt.free();
@@ -307,6 +399,10 @@ export const updateUser = async (id, updates) => {
   if (updates.vacationUntil !== undefined) {
     fields.push('vacation_until = ?');
     values.push(updates.vacationUntil);
+  }
+  if (updates.snoozeUntil !== undefined) {
+    fields.push('snooze_until = ?');
+    values.push(updates.snoozeUntil);
   }
   if (updates.contactPhone !== undefined) {
     fields.push('contact_phone = ?');
@@ -414,6 +510,10 @@ export const getUsersNeedingReminder = async (hours = 24) => {
     AND (
       vacation_until IS NULL
       OR datetime(vacation_until) < datetime('now')
+    )
+    AND (
+      snooze_until IS NULL
+      OR datetime(snooze_until) < datetime('now')
     )
   `);
   stmt.bind([hours]);
@@ -773,6 +873,309 @@ export const pruneOldCheckIns = async (days = config.maxCheckInHistoryDays) => {
     WHERE datetime(checked_in_at) < datetime('now', '-' || ? || ' days')
   `, [days]);
   saveDb();
+};
+
+// =====================================================
+// EMERGENCY CONTACTS
+// =====================================================
+
+// Get all emergency contacts for a user
+export const getEmergencyContacts = async (userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM emergency_contacts
+    WHERE user_id = ? AND is_active = 1
+    ORDER BY priority ASC, created_at ASC
+  `);
+  stmt.bind([userId]);
+
+  const contacts = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    contacts.push({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone,
+      alertPreference: row.alert_preference,
+      priority: row.priority,
+      isActive: !!row.is_active,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    });
+  }
+  stmt.free();
+
+  return contacts;
+};
+
+// Get a single emergency contact by ID
+export const getEmergencyContact = async (contactId, userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM emergency_contacts
+    WHERE id = ? AND user_id = ? AND is_active = 1
+  `);
+  stmt.bind([contactId, userId]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    alertPreference: row.alert_preference,
+    priority: row.priority,
+    isActive: !!row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+};
+
+// Create a new emergency contact
+export const createEmergencyContact = async (userId, contact) => {
+  const database = await getDb();
+
+  // Check if user already has maximum contacts (limit to 5)
+  const existingContacts = await getEmergencyContacts(userId);
+  if (existingContacts.length >= 5) {
+    throw new Error('Maximum of 5 emergency contacts allowed');
+  }
+
+  // Determine next priority
+  const nextPriority = existingContacts.length + 1;
+
+  database.run(`
+    INSERT INTO emergency_contacts (user_id, name, email, phone, alert_preference, priority)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `, [
+    userId,
+    contact.name,
+    contact.email || null,
+    contact.phone || null,
+    contact.alertPreference || 'email',
+    contact.priority || nextPriority
+  ]);
+
+  saveDb();
+
+  // Get the created contact
+  const stmt = database.prepare('SELECT last_insert_rowid() as id');
+  stmt.step();
+  const { id } = stmt.getAsObject();
+  stmt.free();
+
+  return getEmergencyContact(id, userId);
+};
+
+// Update an emergency contact
+export const updateEmergencyContact = async (contactId, userId, updates) => {
+  const database = await getDb();
+  const fields = [];
+  const values = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.email !== undefined) {
+    fields.push('email = ?');
+    values.push(updates.email);
+  }
+  if (updates.phone !== undefined) {
+    fields.push('phone = ?');
+    values.push(updates.phone);
+  }
+  if (updates.alertPreference !== undefined) {
+    fields.push('alert_preference = ?');
+    values.push(updates.alertPreference);
+  }
+  if (updates.priority !== undefined) {
+    fields.push('priority = ?');
+    values.push(updates.priority);
+  }
+
+  if (fields.length === 0) return getEmergencyContact(contactId, userId);
+
+  fields.push("updated_at = datetime('now')");
+  values.push(contactId, userId);
+
+  database.run(
+    `UPDATE emergency_contacts SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`,
+    values
+  );
+  saveDb();
+
+  return getEmergencyContact(contactId, userId);
+};
+
+// Delete (soft delete) an emergency contact
+export const deleteEmergencyContact = async (contactId, userId) => {
+  const database = await getDb();
+  database.run(
+    `UPDATE emergency_contacts SET is_active = 0, updated_at = datetime('now') WHERE id = ? AND user_id = ?`,
+    [contactId, userId]
+  );
+  saveDb();
+  return { success: true };
+};
+
+// =====================================================
+// API KEYS
+// =====================================================
+
+// Hash an API key using SHA-256
+const hashApiKey = async (key) => {
+  const crypto = await import('crypto');
+  return crypto.createHash('sha256').update(key).digest('hex');
+};
+
+// Generate a new API key
+export const generateApiKey = async (userId, label = null) => {
+  const database = await getDb();
+  const crypto = await import('crypto');
+
+  // Generate a random 32-byte key
+  const rawKey = crypto.randomBytes(32).toString('hex');
+  const keyPrefix = rawKey.substring(0, 8); // First 8 chars for display
+  const keyHash = await hashApiKey(rawKey);
+
+  database.run(`
+    INSERT INTO api_keys (user_id, key_hash, key_prefix, label)
+    VALUES (?, ?, ?, ?)
+  `, [userId, keyHash, keyPrefix, label]);
+
+  saveDb();
+
+  // Get the created key ID
+  const stmt = database.prepare('SELECT last_insert_rowid() as id');
+  stmt.step();
+  const { id } = stmt.getAsObject();
+  stmt.free();
+
+  // Return the full key (only shown once!)
+  return {
+    id,
+    key: rawKey,
+    prefix: keyPrefix,
+    label,
+    createdAt: new Date().toISOString()
+  };
+};
+
+// Validate an API key and return user info if valid
+export const validateApiKey = async (key) => {
+  const database = await getDb();
+  const keyHash = await hashApiKey(key);
+
+  const stmt = database.prepare(`
+    SELECT ak.id, ak.user_id, ak.label, u.name as user_name
+    FROM api_keys ak
+    JOIN users u ON ak.user_id = u.id
+    WHERE ak.key_hash = ? AND ak.is_active = 1
+  `);
+  stmt.bind([keyHash]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  // Update last_used_at
+  database.run(
+    `UPDATE api_keys SET last_used_at = datetime('now') WHERE id = ?`,
+    [row.id]
+  );
+  saveDb();
+
+  return {
+    keyId: row.id,
+    userId: row.user_id,
+    userName: row.user_name,
+    label: row.label
+  };
+};
+
+// Get all API keys for a user (without the actual key)
+export const getApiKeys = async (userId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT id, key_prefix, label, last_used_at, created_at
+    FROM api_keys
+    WHERE user_id = ? AND is_active = 1
+    ORDER BY created_at DESC
+  `);
+  stmt.bind([userId]);
+
+  const keys = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    keys.push({
+      id: row.id,
+      prefix: row.key_prefix,
+      label: row.label,
+      lastUsedAt: row.last_used_at,
+      createdAt: row.created_at
+    });
+  }
+  stmt.free();
+
+  return keys;
+};
+
+// Revoke an API key
+export const revokeApiKey = async (keyId, userId) => {
+  const database = await getDb();
+  database.run(
+    `UPDATE api_keys SET is_active = 0 WHERE id = ? AND user_id = ?`,
+    [keyId, userId]
+  );
+  saveDb();
+  return { success: true };
+};
+
+// Log an external check-in
+export const logExternalCheckIn = async (userId, keyId, source, ipAddress) => {
+  const database = await getDb();
+  database.run(`
+    INSERT INTO external_checkins (user_id, key_id, source, ip_address)
+    VALUES (?, ?, ?, ?)
+  `, [userId, keyId, source, ipAddress]);
+  saveDb();
+};
+
+// Get last external check-in for rate limiting
+export const getLastExternalCheckIn = async (keyId) => {
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT created_at FROM external_checkins
+    WHERE key_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  stmt.bind([keyId]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return row.created_at;
 };
 
 // Initialize on import

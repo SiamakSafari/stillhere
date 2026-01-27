@@ -11,9 +11,11 @@ import { ParticleBackground } from './ParticleBackground';
 import { Avatar } from './Avatar';
 import { DailyQuote } from './DailyQuote';
 import { Celebration } from './Celebration';
+import { SnoozeButton } from './SnoozeButton';
 import { ActivityMode } from '../ActivityMode';
 import { SettingsModal } from '../Settings/SettingsModal';
 import { useCheckIn } from '../../hooks/useCheckIn';
+import { useToast } from '../../context/ToastContext';
 import { isOnVacation, formatDate, getDaysUntil, isMilestone } from '../../utils/time';
 import { sounds } from '../../utils/sounds';
 import styles from './MainScreen.module.css';
@@ -23,6 +25,7 @@ export const MainScreen = ({ data, updateData, onReset }) => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationStreak, setCelebrationStreak] = useState(0);
+  const toast = useToast();
   const {
     initiateCheckIn,
     completeCheckIn,
@@ -41,6 +44,16 @@ export const MainScreen = ({ data, updateData, onReset }) => {
 
   const onVacation = isOnVacation(data.vacationUntil);
   const daysUntilReturn = getDaysUntil(data.vacationUntil);
+
+  const handleSnoozeChange = (action, value) => {
+    if (action === 'snoozed') {
+      toast.info(`Alerts snoozed for ${value} hour${value > 1 ? 's' : ''}`);
+    } else if (action === 'cancelled') {
+      toast.info('Snooze cancelled');
+    } else if (action === 'error') {
+      toast.error(value || 'Failed to update snooze');
+    }
+  };
 
   const handleCheckIn = () => {
     initiateCheckIn();
@@ -117,6 +130,17 @@ export const MainScreen = ({ data, updateData, onReset }) => {
         {!onVacation && (
           <div className={styles.activitySection}>
             <ActivityMode data={data} />
+          </div>
+        )}
+
+        {/* Snooze alerts */}
+        {!onVacation && (
+          <div className={styles.snoozeSection}>
+            <SnoozeButton
+              data={data}
+              updateData={updateData}
+              onSnoozeChange={handleSnoozeChange}
+            />
           </div>
         )}
 

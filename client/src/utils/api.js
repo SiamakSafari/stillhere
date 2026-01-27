@@ -299,6 +299,34 @@ export const api = {
   getConfirmationStatus: async (userId) => {
     const response = await fetchWithRetry(`${API_BASE}/confirmations/status/${userId}`);
     return handleResponse(response);
+  },
+
+  // Export endpoints
+  exportCheckInsUrl: (userId, days = 365) => {
+    const token = getAuthToken();
+    // Return URL for direct download (include token as query param for downloads)
+    return `${API_BASE}/export/${userId}/checkins?days=${days}${token ? `&token=${token}` : ''}`;
+  },
+
+  exportSummaryUrl: (userId) => {
+    const token = getAuthToken();
+    return `${API_BASE}/export/${userId}/summary${token ? `?token=${token}` : ''}`;
+  },
+
+  // Snooze alerts
+  snoozeAlerts: async (userId, hours = 2) => {
+    const response = await fetchWithRetry(`${API_BASE}/users/${userId}/snooze`, {
+      method: 'POST',
+      body: JSON.stringify({ hours })
+    });
+    return handleResponse(response);
+  },
+
+  cancelSnooze: async (userId) => {
+    const response = await fetchWithRetry(`${API_BASE}/users/${userId}/snooze`, {
+      method: 'DELETE'
+    });
+    return handleResponse(response);
   }
 };
 

@@ -2,6 +2,8 @@ import 'dotenv/config';
 import * as Sentry from '@sentry/node';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import config from './config.js';
 import usersRouter from './routes/users.js';
 import checkinsRouter from './routes/checkins.js';
@@ -12,6 +14,7 @@ import familyRouter from './routes/family.js';
 import contactsRouter from './routes/contacts.js';
 import smsWebhookRouter from './routes/sms-webhook.js';
 import externalRouter from './routes/external.js';
+import exportRouter from './routes/export.js';
 import { startScheduler } from './services/scheduler.js';
 import { initPushTable } from './services/push.js';
 
@@ -53,8 +56,80 @@ if (process.env.SENTRY_DSN) {
 // Trust proxy for correct client IP behind reverse proxies
 app.set('trust proxy', 1);
 
-// Middleware
-app.use(cors());
+// Security headers using Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable for API compatibility
+}));
+
+// CORS configuration - restrict to allowed origins
+const allowedOrigins = [
+  config.appUrl,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
+  'http://localhost:3004',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
+  'http://127.0.0.1:3003',
+  'http://127.0.0.1:3004',
+];
+
+// Add production origins from environment
+if (process.env.ALLOWED_ORIGINS) {
+  const envOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+  allowedOrigins.push(...envOrigins);
+}
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Global rate limiting
+const limiter = rateLimit({
+  windowMs: config.rateLimitWindowMs,
+  max: config.rateLimitMaxRequests,
+  message: {
+    error: 'Too many requests',
+    code: 'RATE_LIMITED',
+    retryAfter: Math.ceil(config.rateLimitWindowMs / 1000)
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip rate limiting for health checks
+  skip: (req) => req.path === '/api/health',
+});
+
+app.use(limiter);
+
 app.use(express.json({ limit: '1mb' }));
 
 // Request logging
@@ -88,6 +163,7 @@ app.use('/api/activity', activitiesRouter);
 app.use('/api/family', familyRouter);
 app.use('/api/contacts', contactsRouter);
 app.use('/api/sms', smsWebhookRouter);
+app.use('/api/export', exportRouter);
 app.use('/api', externalRouter); // External check-in + API key management
 
 // Sentry error handler must be before any other error middleware

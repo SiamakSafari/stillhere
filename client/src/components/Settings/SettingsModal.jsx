@@ -15,6 +15,7 @@ import { MemberBadge } from './MemberBadge';
 import { EmergencyContacts } from './EmergencyContacts';
 import { SmsCheckIn } from './SmsCheckIn';
 import { SmartHomeIntegration } from './SmartHomeIntegration';
+import { ExportData } from './ExportData';
 import { exportData, importData } from '../../utils/storage';
 import { api } from '../../utils/api';
 import styles from './Settings.module.css';
@@ -193,6 +194,8 @@ export const SettingsModal = ({ data, updateData, onClose, onReset }) => {
           <PetCard data={data} updateData={updateData} />
 
           <MemberBadge data={data} />
+
+          <ExportData data={data} />
 
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Test Alert</h3>

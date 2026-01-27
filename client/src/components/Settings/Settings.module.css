@@ -669,3 +669,29 @@
   color: var(--gray-500);
   text-align: center;
 }
+
+/* Export options */
+.exportOptions {
+  margin-bottom: var(--spacing-md);
+}
+
+.selectLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--gray-300);
+}
+
+.selectLabel .select {
+  flex: 1;
+  max-width: 200px;
+}
+
+/* Hint text */
+.hint {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  font-style: italic;
+}

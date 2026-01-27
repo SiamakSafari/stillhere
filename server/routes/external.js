@@ -9,6 +9,8 @@ import {
   logExternalCheckIn,
   getLastExternalCheckIn
 } from '../db/database.js';
+import { authenticate, authorizeUser } from '../middleware/auth.js';
+import { validateUUIDParam } from '../middleware/validate.js';
 
 const router = express.Router();
 
@@ -102,7 +104,7 @@ router.post('/checkin/external', async (req, res) => {
 });
 
 // GET /api/keys/:userId - List user's API keys
-router.get('/keys/:userId', async (req, res) => {
+router.get('/keys/:userId', validateUUIDParam('userId'), authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     const keys = await getApiKeys(req.params.userId);
     res.json(keys);
@@ -113,7 +115,7 @@ router.get('/keys/:userId', async (req, res) => {
 });
 
 // POST /api/keys/:userId - Generate new API key
-router.post('/keys/:userId', async (req, res) => {
+router.post('/keys/:userId', validateUUIDParam('userId'), authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     const { label } = req.body;
 
@@ -145,7 +147,7 @@ router.post('/keys/:userId', async (req, res) => {
 });
 
 // DELETE /api/keys/:userId/:keyId - Revoke API key
-router.delete('/keys/:userId/:keyId', async (req, res) => {
+router.delete('/keys/:userId/:keyId', validateUUIDParam('userId'), authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     await revokeApiKey(
       parseInt(req.params.keyId),

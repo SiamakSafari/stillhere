@@ -5,11 +5,13 @@ import {
   updateEmergencyContact,
   deleteEmergencyContact
 } from '../db/database.js';
+import { authenticate, authorizeUser } from '../middleware/auth.js';
+import { validateUUIDParam, validateEmergencyContact } from '../middleware/validate.js';
 
 const router = express.Router();
 
 // GET /api/contacts/:userId - List all contacts for a user
-router.get('/:userId', async (req, res) => {
+router.get('/:userId', validateUUIDParam('userId'), authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     const contacts = await getEmergencyContacts(req.params.userId);
     res.json(contacts);
@@ -20,17 +22,9 @@ router.get('/:userId', async (req, res) => {
 });
 
 // POST /api/contacts/:userId - Add a new contact
-router.post('/:userId', async (req, res) => {
+router.post('/:userId', validateUUIDParam('userId'), validateEmergencyContact, authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     const { name, email, phone, alertPreference } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: 'Contact name is required' });
-    }
-
-    if (!email && !phone) {
-      return res.status(400).json({ error: 'Either email or phone is required' });
-    }
 
     const contact = await createEmergencyContact(req.params.userId, {
       name,
@@ -50,7 +44,7 @@ router.post('/:userId', async (req, res) => {
 });
 
 // PUT /api/contacts/:userId/:contactId - Update a contact
-router.put('/:userId/:contactId', async (req, res) => {
+router.put('/:userId/:contactId', validateUUIDParam('userId'), validateEmergencyContact, authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     const { name, email, phone, alertPreference, priority } = req.body;
 
@@ -72,7 +66,7 @@ router.put('/:userId/:contactId', async (req, res) => {
 });
 
 // DELETE /api/contacts/:userId/:contactId - Delete a contact
-router.delete('/:userId/:contactId', async (req, res) => {
+router.delete('/:userId/:contactId', validateUUIDParam('userId'), authenticate, authorizeUser('userId'), async (req, res) => {
   try {
     await deleteEmergencyContact(
       parseInt(req.params.contactId),

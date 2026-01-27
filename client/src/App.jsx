@@ -4,6 +4,8 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Onboarding } from './components/Onboarding';
 import { MainScreen } from './components/MainScreen';
 import { FamilyDashboard } from './pages/FamilyDashboard';
+import { ToastProvider } from './context/ToastContext';
+import { ToastContainer } from './components/common/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { syncToServer } from './utils/api';
 import { syncWidget } from './plugins/WidgetBridge';
@@ -193,12 +195,13 @@ function App() {
 
   // Show main screen
   return (
-    <>
+    <ToastProvider>
       <MainScreen
         data={data}
         updateData={updateData}
         onReset={handleReset}
       />
+      <ToastContainer />
       {!isOnline && (
         <div
           style={{
@@ -237,7 +240,7 @@ function App() {
           You're offline
         </div>
       )}
-    </>
+    </ToastProvider>
   );
 }
 

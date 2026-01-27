@@ -670,6 +670,13 @@
   z-index: 1;
 }
 
+/* Snooze section */
+.snoozeSection {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--spacing-md);
+}
+
 /* Expandable Stats Card */
 .statCardClickable {
   cursor: pointer;

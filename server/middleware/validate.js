@@ -291,11 +291,98 @@ export const validateUUIDParam = (paramName = 'id') => {
   };
 };
 
+/**
+ * Validate emergency contact creation/update
+ */
+export const validateEmergencyContact = (req, res, next) => {
+  const errors = [];
+  const { name, email, phone, alertPreference, priority } = req.body;
+
+  // For creation, name is required
+  if (req.method === 'POST') {
+    if (!name || !isString(name) || name.trim().length === 0) {
+      errors.push({ field: 'name', message: 'Contact name is required' });
+    }
+
+    if (!email && !phone) {
+      errors.push({ field: 'email', message: 'Either email or phone is required' });
+    }
+  }
+
+  // Field validations
+  if (name !== undefined && name !== null) {
+    if (!isString(name) || name.trim().length === 0) {
+      errors.push({ field: 'name', message: 'Name must be a non-empty string' });
+    } else if (name.length > 100) {
+      errors.push({ field: 'name', message: 'Name must be 100 characters or less' });
+    }
+  }
+
+  if (email !== undefined && email !== null && email !== '') {
+    if (!isEmail(email)) {
+      errors.push({ field: 'email', message: 'Invalid email format' });
+    }
+  }
+
+  if (phone !== undefined && phone !== null && phone !== '') {
+    if (!isPhoneNumber(phone)) {
+      errors.push({ field: 'phone', message: 'Invalid phone number format' });
+    }
+  }
+
+  if (alertPreference !== undefined && alertPreference !== null) {
+    const validPreferences = ['email', 'sms', 'both'];
+    if (!validPreferences.includes(alertPreference)) {
+      errors.push({ field: 'alertPreference', message: 'Alert preference must be email, sms, or both' });
+    }
+  }
+
+  if (priority !== undefined && priority !== null) {
+    if (typeof priority !== 'number' || priority < 1 || priority > 5) {
+      errors.push({ field: 'priority', message: 'Priority must be between 1 and 5' });
+    }
+  }
+
+  if (errors.length > 0) {
+    return validationError(res, errors);
+  }
+
+  // Sanitize inputs
+  if (req.body.name) req.body.name = sanitizeString(req.body.name, 100);
+  if (req.body.email) req.body.email = sanitizeString(req.body.email, 254);
+  if (req.body.phone) req.body.phone = sanitizeString(req.body.phone, 20);
+
+  next();
+};
+
+/**
+ * Validate snooze request
+ */
+export const validateSnooze = (req, res, next) => {
+  const errors = [];
+  const { hours } = req.body;
+
+  if (hours !== undefined && hours !== null) {
+    const h = parseInt(hours);
+    if (isNaN(h) || h < 1 || h > 24) {
+      errors.push({ field: 'hours', message: 'Hours must be between 1 and 24' });
+    }
+  }
+
+  if (errors.length > 0) {
+    return validationError(res, errors);
+  }
+
+  next();
+};
+
 export default {
   validateUser,
   validateCheckIn,
   validateVacation,
   validateActivity,
   validateShareToken,
-  validateUUIDParam
+  validateUUIDParam,
+  validateEmergencyContact,
+  validateSnooze
 };

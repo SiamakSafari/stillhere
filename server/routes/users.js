@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { createUser, getUser, updateUser } from '../db/database.js';
 import { sendAlert } from '../services/email.js';
 import { authenticate, authorizeUser } from '../middleware/auth.js';
-import { validateUser, validateUUIDParam } from '../middleware/validate.js';
+import { validateUser, validateUUIDParam, validateSnooze } from '../middleware/validate.js';
 import { success, created, notFound, conflict, serverError } from '../utils/response.js';
 
 const router = Router();
@@ -106,6 +106,64 @@ router.post('/:id/test-alert',
     } catch (err) {
       console.error('Error sending test alert:', err);
       return serverError(res, 'Failed to send test alert');
+    }
+  }
+);
+
+// Snooze alerts for a specified duration
+router.post('/:id/snooze',
+  validateUUIDParam('id'),
+  validateSnooze,
+  authenticate,
+  authorizeUser('id'),
+  async (req, res) => {
+    try {
+      const { hours = 2 } = req.body;
+
+      // Validate hours (max 24 hours)
+      const snoozeHours = Math.min(Math.max(1, parseInt(hours) || 2), 24);
+
+      const user = await getUser(req.params.id);
+
+      if (!user) {
+        return notFound(res, 'User not found');
+      }
+
+      // Calculate snooze end time
+      const snoozeUntil = new Date(Date.now() + snoozeHours * 60 * 60 * 1000).toISOString();
+
+      const updatedUser = await updateUser(req.params.id, { snoozeUntil });
+
+      return success(res, {
+        message: `Alerts snoozed for ${snoozeHours} hour${snoozeHours > 1 ? 's' : ''}`,
+        snoozeUntil: updatedUser.snoozeUntil
+      });
+    } catch (err) {
+      console.error('Error snoozing alerts:', err);
+      return serverError(res, 'Failed to snooze alerts');
+    }
+  }
+);
+
+// Cancel snooze
+router.delete('/:id/snooze',
+  validateUUIDParam('id'),
+  authenticate,
+  authorizeUser('id'),
+  async (req, res) => {
+    try {
+      const user = await getUser(req.params.id);
+
+      if (!user) {
+        return notFound(res, 'User not found');
+      }
+
+      await updateUser(req.params.id, { snoozeUntil: null });
+
+      return success(res, { message: 'Snooze cancelled' });
+    } catch (err) {
+      console.error('Error cancelling snooze:', err);
+      return serverError(res, 'Failed to cancel snooze');
     }
   }
 );

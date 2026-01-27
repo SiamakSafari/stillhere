@@ -76,7 +76,10 @@ export const sounds = {
     try {
       await Promise.all([
         loadSound('checkin', '/sounds/checkin.wav'),
-        loadSound('milestone', '/sounds/milestone.wav')
+        loadSound('milestone', '/sounds/milestone.wav'),
+        loadSound('click', '/sounds/click.wav'),
+        loadSound('error', '/sounds/error.wav'),
+        loadSound('success', '/sounds/success.wav')
       ]);
     } catch (error) {
       console.warn('Could not initialize sounds', error);
@@ -102,6 +105,39 @@ export const sounds = {
       playBuffer('milestone', 0.5);
     } else {
       playAudioElement('/sounds/milestone.wav', 0.5);
+    }
+  },
+
+  // Play subtle click sound for button interactions
+  playClick: (enabled = true) => {
+    if (!enabled) return;
+
+    if (soundBuffers.click) {
+      playBuffer('click', 0.2);
+    } else {
+      playAudioElement('/sounds/click.wav', 0.2);
+    }
+  },
+
+  // Play error feedback sound
+  playError: (enabled = true) => {
+    if (!enabled) return;
+
+    if (soundBuffers.error) {
+      playBuffer('error', 0.35);
+    } else {
+      playAudioElement('/sounds/error.wav', 0.35);
+    }
+  },
+
+  // Play success confirmation sound
+  playSuccess: (enabled = true) => {
+    if (!enabled) return;
+
+    if (soundBuffers.success) {
+      playBuffer('success', 0.4);
+    } else {
+      playAudioElement('/sounds/success.wav', 0.4);
     }
   }
 };

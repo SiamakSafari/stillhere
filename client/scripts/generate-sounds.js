@@ -172,6 +172,68 @@ function generateMilestoneSound() {
   return mixed;
 }
 
+// Generate click sound: subtle soft click
+function generateClickSound() {
+  const sampleRate = 44100;
+  const duration = 0.08;
+
+  // Very short high-frequency click with fast decay
+  const note = generateTone(1200, duration, sampleRate, 'decay');
+
+  // Apply even faster decay for click feel
+  const samples = new Int16Array(note.length);
+  for (let i = 0; i < note.length; i++) {
+    const t = i / sampleRate;
+    const fastDecay = Math.exp(-20 * t);
+    samples[i] = Math.floor(note[i] * fastDecay * 0.5);
+  }
+
+  return samples;
+}
+
+// Generate error sound: low descending tone
+function generateErrorSound() {
+  const sampleRate = 44100;
+  const duration = 0.35;
+
+  // Two descending notes (E4 to C4)
+  const note1 = generateTone(329.63, duration * 0.6, sampleRate, 'decay'); // E4
+  const note2 = generateTone(261.63, duration * 0.6, sampleRate, 'decay'); // C4
+
+  const totalSamples = Math.floor(sampleRate * duration);
+  const note1Full = offsetSamples(note1, 0, totalSamples);
+  const note2Full = offsetSamples(note2, Math.floor(sampleRate * 0.12), totalSamples);
+
+  // Mix
+  const mixed = new Int16Array(totalSamples);
+  for (let i = 0; i < totalSamples; i++) {
+    const val = note1Full[i] * 0.5 + note2Full[i] * 0.5;
+    mixed[i] = Math.max(-32768, Math.min(32767, Math.floor(val)));
+  }
+
+  return mixed;
+}
+
+// Generate success sound: bright confirmation tone
+function generateSuccessSound() {
+  const sampleRate = 44100;
+  const duration = 0.25;
+
+  // Single bright chord (C major)
+  const c5 = generateTone(523.25, duration, sampleRate, 'decay');
+  const e5 = generateTone(659.25, duration, sampleRate, 'decay');
+  const g5 = generateTone(783.99, duration, sampleRate, 'decay');
+
+  // Mix chord
+  const mixed = new Int16Array(c5.length);
+  for (let i = 0; i < c5.length; i++) {
+    const val = c5[i] * 0.4 + e5[i] * 0.35 + g5[i] * 0.35;
+    mixed[i] = Math.max(-32768, Math.min(32767, Math.floor(val)));
+  }
+
+  return mixed;
+}
+
 // Main
 const soundsDir = join(__dirname, '..', 'public', 'sounds');
 if (!existsSync(soundsDir)) {
@@ -186,5 +248,14 @@ saveWav(join(soundsDir, 'checkin.wav'), checkInSamples);
 const milestoneSamples = generateMilestoneSound();
 saveWav(join(soundsDir, 'milestone.wav'), milestoneSamples);
 
+const clickSamples = generateClickSound();
+saveWav(join(soundsDir, 'click.wav'), clickSamples);
+
+const errorSamples = generateErrorSound();
+saveWav(join(soundsDir, 'error.wav'), errorSamples);
+
+const successSamples = generateSuccessSound();
+saveWav(join(soundsDir, 'success.wav'), successSamples);
+
 console.log('\nDone! Sound files created in public/sounds/');
-console.log('\nNote: Files are WAV format. Update sounds.js to use .wav extension if needed.');
+console.log('\nNote: Files are WAV format.');
