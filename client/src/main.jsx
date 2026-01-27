@@ -56,8 +56,12 @@ const initNative = async () => {
       // Status bar config may not be supported on all platforms
     }
 
-    // Initialize push notifications
-    await initPushNotifications();
+    // Initialize push notifications (wrapped in try-catch for Firebase issues)
+    try {
+      await initPushNotifications();
+    } catch (e) {
+      console.log('[PushNotifications] Init failed (Firebase not configured?):', e.message);
+    }
 
     // Hide splash screen after app is ready
     await SplashScreen.hide();
