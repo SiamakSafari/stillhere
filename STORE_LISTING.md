@@ -7,39 +7,41 @@ Still Here
 Daily safety check-in
 
 ## Short Description (80 characters)
-One tap daily confirms you're okay. Miss 48 hours? Your contact is notified.
+Daily safety check-in. Miss 48 hours? Your emergency contacts are notified.
 
 ## Full Description (4000 characters)
 Still Here is a simple daily check-in app for people who live alone.
 
 HOW IT WORKS
-- Tap once a day to confirm you're okay
-- If you don't check in for 48 hours, your emergency contact is notified
-- That's it. No complicated features. No subscriptions.
+• Tap once a day to confirm you're okay
+• If you don't check in for 48 hours, your emergency contacts are notified
+• Simple, reliable, and designed for peace of mind
 
 PERFECT FOR
-- People who live alone
-- Remote workers
-- Solo travelers
-- Anyone whose loved ones worry about them
+• People who live alone
+• Remote workers and digital nomads
+• Solo travelers and adventurers
+• Anyone whose loved ones worry about them
 
 FEATURES
-- One-tap daily check-in
-- Optional mood tracking
-- Activity mode for runs, dates, or meetings
-- Vacation mode when you're away
-- Check-in history and streaks
-- Works offline
+• One-tap daily check-in (or use the home screen widget!)
+• Up to 5 emergency contacts with email & SMS alerts
+• Activity mode for runs, hikes, dates, or meetings
+• Vacation mode when you're away
+• Mood tracking and wellness trends
+• Check-in history and streaks
+• Family dashboard for loved ones to check your status
+• Works offline
 
 PRIVACY FIRST
-- Your data stays on your device
-- Only your emergency contact info is stored on our servers
-- No tracking, no ads, no selling your data
+• Your data stays on your device
+• Minimal data stored on servers (just what's needed for alerts)
+• No tracking, no ads, no selling your data
 
-FREE FOREVER
-- No subscriptions
-- No premium tiers
-- Optional tip jar if you love the app
+SUBSCRIPTION
+Still Here costs $4.99/month or $39.99/year (save 33%). 
+
+Why paid? Because your safety matters. No ads, no data selling, no compromises. Just a reliable service that works when you need it.
 
 ## Keywords
 safety, check-in, emergency, alone, daily, wellness, peace of mind, living alone, safety net, alert, notification
