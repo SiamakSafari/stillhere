@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#1a1a1a"/>
+  
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#4ade80" stroke-width="16"/>
+  
+  <!-- Green checkmark -->
+  <path d="M180 260 L230 310 L340 190" 
+        fill="none" 
+        stroke="#4ade80" 
+        stroke-width="40" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+</svg>
