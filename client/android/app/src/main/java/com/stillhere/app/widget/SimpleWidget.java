@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.widget.RemoteViews;
 import com.stillhere.app.MainActivity;
 import com.stillhere.app.R;
@@ -15,9 +16,11 @@ public class SimpleWidget extends AppWidgetProvider {
         for (int appWidgetId : appWidgetIds) {
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.simple_widget);
             
-            // Create intent to open app when widget is tapped
-            Intent intent = new Intent(context, MainActivity.class);
+            // Create deep link intent for one-tap check-in
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse("stillhere://checkin"));
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            
             PendingIntent pendingIntent = PendingIntent.getActivity(
                 context, 
                 0, 

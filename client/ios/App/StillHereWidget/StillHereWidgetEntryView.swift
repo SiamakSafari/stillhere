@@ -37,10 +37,15 @@ struct SmallWidgetView: View {
         if entry.isOnVacation {
             return "On Vacation"
         } else if entry.hasCheckedInToday {
-            return "Checked In"
+            return "Checked In ✓"
         } else {
-            return "Check In"
+            return "Tap to Check In"
         }
+    }
+    
+    // Deep link URL for check-in action
+    var checkInURL: URL {
+        URL(string: "stillhere://checkin")!
     }
 
     var body: some View {
@@ -56,7 +61,8 @@ struct SmallWidgetView: View {
                         .frame(width: 8, height: 8)
                     Text(statusText)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .fontWeight(entry.hasCheckedInToday ? .regular : .semibold)
+                        .foregroundColor(entry.hasCheckedInToday ? .secondary : statusColor)
                     Spacer()
                 }
 
@@ -82,9 +88,21 @@ struct SmallWidgetView: View {
                     }
                     .foregroundColor(.secondary)
                 }
+                
+                // Show tap hint when not checked in
+                if !entry.hasCheckedInToday && !entry.isOnVacation {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hand.tap.fill")
+                            .font(.caption2)
+                        Text("One tap check-in")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(statusColor)
+                }
             }
             .padding()
         }
+        .widgetURL(entry.hasCheckedInToday || entry.isOnVacation ? nil : checkInURL)
     }
 }
 
@@ -107,9 +125,9 @@ struct MediumWidgetView: View {
         if entry.isOnVacation {
             return "On Vacation"
         } else if entry.hasCheckedInToday {
-            return "Checked In Today"
+            return "Checked In Today ✓"
         } else {
-            return "Time to Check In"
+            return "Tap to Check In"
         }
     }
 
@@ -119,8 +137,13 @@ struct MediumWidgetView: View {
         } else if entry.hasCheckedInToday {
             return "checkmark.circle.fill"
         } else {
-            return "hand.wave.fill"
+            return "hand.tap.fill"
         }
+    }
+    
+    // Deep link URL for check-in action
+    var checkInURL: URL {
+        URL(string: "stillhere://checkin")!
     }
 
     var body: some View {
@@ -160,7 +183,7 @@ struct MediumWidgetView: View {
                     Text(statusText)
                         .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.primary)
+                        .foregroundColor(entry.hasCheckedInToday ? .primary : statusColor)
 
                     if let timeUntil = entry.timeUntilWindow {
                         HStack(spacing: 4) {
@@ -171,10 +194,18 @@ struct MediumWidgetView: View {
                         }
                         .foregroundColor(.secondary)
                     }
+                    
+                    // Show one-tap hint when not checked in
+                    if !entry.hasCheckedInToday && !entry.isOnVacation {
+                        Text("One tap check-in")
+                            .font(.caption2)
+                            .foregroundColor(statusColor)
+                    }
                 }
             }
             .padding()
         }
+        .widgetURL(entry.hasCheckedInToday || entry.isOnVacation ? nil : checkInURL)
     }
 }
 

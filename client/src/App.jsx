@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Onboarding } from './components/Onboarding';
@@ -7,7 +7,7 @@ import { FamilyDashboard } from './pages/FamilyDashboard';
 import { ToastProvider } from './context/ToastContext';
 import { ToastContainer } from './components/common/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { syncToServer } from './utils/api';
+import { syncToServer, api } from './utils/api';
 import { syncWidget } from './plugins/WidgetBridge';
 import { initializeNotifications, scheduleDailyReminders, scheduleStreakWarning } from './services/notifications';
 
@@ -183,6 +183,58 @@ function App() {
       lastCheckIn: data.lastCheckIn
     });
   }, [data.streak, data.lastCheckIn]);
+
+  // Handle deep links for widget one-tap check-in
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !data.onboardingComplete) return;
+
+    const handleDeepLink = async (event) => {
+      const url = event.url;
+      console.log('[App] Deep link received:', url);
+
+      // Handle stillhere://checkin deep link
+      if (url && url.startsWith('stillhere://checkin')) {
+        console.log('[App] Widget check-in triggered');
+        
+        try {
+          // Perform quick check-in without mood/note
+          const result = await api.checkIn(data.userId, {});
+          
+          if (result && !result.alreadyCheckedIn) {
+            // Update local state
+            const now = new Date().toISOString();
+            const newStreak = result.user?.streak || (data.streak + 1);
+            
+            updateData({
+              lastCheckIn: now,
+              streak: newStreak,
+              checkInHistory: [...(data.checkInHistory || []), now]
+            });
+
+            // Sync widget with new data
+            syncWidget({
+              ...data,
+              lastCheckIn: now,
+              streak: newStreak
+            });
+
+            console.log('[App] Widget check-in successful, streak:', newStreak);
+          } else {
+            console.log('[App] Already checked in today');
+          }
+        } catch (error) {
+          console.error('[App] Widget check-in failed:', error);
+        }
+      }
+    };
+
+    // Listen for app URL open events
+    const urlListener = CapacitorApp.addListener('appUrlOpen', handleDeepLink);
+
+    return () => {
+      urlListener.then(l => l.remove());
+    };
+  }, [data.onboardingComplete, data.userId, data.streak]);
 
   // Handle completing onboarding
   const handleOnboardingComplete = () => {
