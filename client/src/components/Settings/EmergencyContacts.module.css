@@ -168,6 +168,63 @@
   margin-bottom: var(--spacing-md);
 }
 
+/* Email verification styles */
+.emailText {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-primary, var(--green-primary));
+  border-radius: 50%;
+  color: var(--bg-dark);
+}
+
+.verificationWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--yellow-warning);
+}
+
+.verificationWarning svg {
+  flex-shrink: 0;
+}
+
+.verifyButton {
+  margin-left: auto;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--yellow-warning);
+  color: var(--bg-dark);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.verifyButton:hover {
+  opacity: 0.9;
+}
+
+.verifyButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .smallSpinner {
   width: 14px;
   height: 14px;

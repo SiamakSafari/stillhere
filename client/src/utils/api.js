@@ -199,6 +199,14 @@ export const api = {
     return handleResponse(response);
   },
 
+  // Send email verification to a contact
+  sendVerificationEmail: async (userId, contactId) => {
+    const response = await fetchWithRetry(`${API_BASE}/contacts/${userId}/${contactId}/send-verification`, {
+      method: 'POST'
+    });
+    return handleResponse(response);
+  },
+
   // Activity Mode endpoints
   startActivity: async (userId, activityData) => {
     const response = await fetchWithRetry(`${API_BASE}/activity/start`, {

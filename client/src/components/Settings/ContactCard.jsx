@@ -9,11 +9,12 @@ const ALERT_OPTIONS = [
   { value: 'both', label: 'Email & SMS' }
 ];
 
-export const ContactCard = ({ contact, index, onUpdate, onDelete, userId, onTestResult }) => {
+export const ContactCard = ({ contact, index, onUpdate, onDelete, userId, onTestResult, onVerificationSent }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [editData, setEditData] = useState({
     name: contact.name,
     email: contact.email || '',
@@ -60,7 +61,24 @@ export const ContactCard = ({ contact, index, onUpdate, onDelete, userId, onTest
     }
   };
 
+  const handleSendVerification = async () => {
+    if (!userId || !contact.email) return;
+    
+    setIsSendingVerification(true);
+    try {
+      await api.sendVerificationEmail(userId, contact.id);
+      onVerificationSent?.({ success: true, contactName: contact.name });
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      onVerificationSent?.({ success: false, error: error.message, contactName: contact.name });
+    } finally {
+      setIsSendingVerification(false);
+    }
+  };
+
   const alertLabel = ALERT_OPTIONS.find(o => o.value === contact.alertPreference)?.label || 'Email only';
+  const needsEmailVerification = contact.email && !contact.emailVerified && 
+    (contact.alertPreference === 'email' || contact.alertPreference === 'both');
 
   if (isEditing) {
     return (
@@ -182,7 +200,33 @@ export const ContactCard = ({ contact, index, onUpdate, onDelete, userId, onTest
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
               <polyline points="22,6 12,13 2,6" />
             </svg>
-            {contact.email}
+            <span className={styles.emailText}>
+              {contact.email}
+              {contact.emailVerified && (
+                <span className={styles.verifiedBadge} title="Email verified">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                  </svg>
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+        {needsEmailVerification && (
+          <div className={styles.verificationWarning}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Email not verified</span>
+            <button
+              className={styles.verifyButton}
+              onClick={handleSendVerification}
+              disabled={isSendingVerification}
+            >
+              {isSendingVerification ? 'Sending...' : 'Send Verification'}
+            </button>
           </div>
         )}
         {contact.phone && (

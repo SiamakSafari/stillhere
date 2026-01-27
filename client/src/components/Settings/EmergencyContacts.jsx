@@ -26,6 +26,24 @@ export const EmergencyContacts = ({ data }) => {
     setTimeout(() => setTestResult(null), 5000);
   };
 
+  const handleVerificationSent = (result) => {
+    if (result.success) {
+      setTestResult({ 
+        success: true, 
+        contactName: result.contactName,
+        isVerification: true 
+      });
+    } else {
+      setTestResult({ 
+        success: false, 
+        error: result.error,
+        contactName: result.contactName,
+        isVerification: true 
+      });
+    }
+    setTimeout(() => setTestResult(null), 5000);
+  };
+
   useEffect(() => {
     if (data.userId) {
       loadContacts();
@@ -155,8 +173,12 @@ export const EmergencyContacts = ({ data }) => {
             )}
           </svg>
           {testResult.success 
-            ? `Test alert sent to ${testResult.contactName}! Check their inbox/phone.`
-            : `Failed to send test alert: ${testResult.error || 'Unknown error'}`}
+            ? testResult.isVerification
+              ? `Verification email sent to ${testResult.contactName}! They should click the link to verify.`
+              : `Test alert sent to ${testResult.contactName}! Check their inbox/phone.`
+            : testResult.isVerification
+              ? `Failed to send verification: ${testResult.error || 'Unknown error'}`
+              : `Failed to send test alert: ${testResult.error || 'Unknown error'}`}
         </div>
       )}
 
@@ -171,6 +193,7 @@ export const EmergencyContacts = ({ data }) => {
             onUpdate={(updates) => handleUpdateContact(contact.id, updates)}
             onDelete={() => handleDeleteContact(contact.id)}
             onTestResult={handleTestResult}
+            onVerificationSent={handleVerificationSent}
           />
         ))}
       </div>
