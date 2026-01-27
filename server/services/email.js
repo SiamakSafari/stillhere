@@ -596,3 +596,90 @@ export const sendActivityAlert = async (user, activity) => {
     return { success: false, error: error.message };
   }
 };
+
+// Send email verification to emergency contact
+export const sendVerificationEmail = async (user, contact, token) => {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('SendGrid API key not configured - verification email not sent');
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  if (!contact.email) {
+    return { success: false, error: 'Contact has no email address' };
+  }
+
+  // Build verification URL
+  const baseUrl = process.env.APP_URL || 'https://stillhere.app';
+  const verificationUrl = `${baseUrl}/api/contacts/verify/${token}`;
+
+  const msg = {
+    to: contact.email,
+    from: FROM_EMAIL,
+    subject: `Verify your email - Still Here`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: 'Courier New', monospace;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+          <div style="background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 40px; border: 1px solid #374151;">
+
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="width: 60px; height: 60px; background: #4ade80; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 30px; color: #0a0a0a;">✓</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">
+                Verify Your Email
+              </h1>
+            </div>
+
+            <p style="color: #e5e7eb; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Hi ${escapeHtml(contact.name)},
+            </p>
+
+            <p style="color: #e5e7eb; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              <strong>${escapeHtml(user.name)}</strong> has added you as an emergency contact on Still Here, 
+              a daily check-in app for peace of mind.
+            </p>
+
+            <p style="color: #9ca3af; font-size: 14px; line-height: 1.6; margin: 0 0 30px 0;">
+              As their emergency contact, you'll receive alerts if they miss their daily check-in for an extended period. 
+              Please verify your email to confirm you can receive these important notifications.
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}"
+                 style="display: inline-block; background: #4ade80; color: #0a0a0a; padding: 14px 28px;
+                        border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 16px;">
+                Verify My Email
+              </a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 12px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
+              If you didn't expect this email, you can safely ignore it.
+            </p>
+
+            <div style="border-top: 1px solid #374151; margin-top: 30px; padding-top: 20px;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                Still Here is a daily check-in app for peace of mind.
+              </p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`Verification email sent to ${contact.email} for user ${user.name}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+    return { success: false, error: error.message };
+  }
+};

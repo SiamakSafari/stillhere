@@ -95,12 +95,35 @@ const createEmergencyContactsTable = (database) => {
       alert_preference TEXT DEFAULT 'email',
       priority INTEGER DEFAULT 1,
       is_active INTEGER DEFAULT 1,
+      email_verified INTEGER DEFAULT 0,
+      email_verification_token TEXT,
+      email_verification_sent_at TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
   database.run(`CREATE INDEX IF NOT EXISTS idx_emergency_contacts_user_id ON emergency_contacts(user_id)`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_emergency_contacts_verification_token ON emergency_contacts(email_verification_token)`);
+};
+
+// Run migrations for emergency_contacts table
+const migrateEmergencyContacts = (database) => {
+  const columns = new Set();
+  const pragma = database.exec("PRAGMA table_info(emergency_contacts)");
+  if (pragma.length > 0) {
+    pragma[0].values.forEach(row => columns.add(row[1]));
+  }
+
+  if (!columns.has('email_verified')) {
+    database.run('ALTER TABLE emergency_contacts ADD COLUMN email_verified INTEGER DEFAULT 0');
+  }
+  if (!columns.has('email_verification_token')) {
+    database.run('ALTER TABLE emergency_contacts ADD COLUMN email_verification_token TEXT');
+  }
+  if (!columns.has('email_verification_sent_at')) {
+    database.run('ALTER TABLE emergency_contacts ADD COLUMN email_verification_sent_at TEXT');
+  }
 };
 
 // Create api_keys table
@@ -225,6 +248,9 @@ const initDb = async () => {
 
   // Create emergency contacts table
   createEmergencyContactsTable(db);
+
+  // Run migrations for emergency contacts (add new columns)
+  migrateEmergencyContacts(db);
 
   // Create API keys table
   createApiKeysTable(db);
@@ -901,6 +927,7 @@ export const getEmergencyContacts = async (userId) => {
       alertPreference: row.alert_preference,
       priority: row.priority,
       isActive: !!row.is_active,
+      emailVerified: !!row.email_verified,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     });
@@ -936,9 +963,67 @@ export const getEmergencyContact = async (contactId, userId) => {
     alertPreference: row.alert_preference,
     priority: row.priority,
     isActive: !!row.is_active,
+    emailVerified: !!row.email_verified,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
+};
+
+// Get contact by verification token
+export const getContactByVerificationToken = async (token) => {
+  if (!token) return null;
+
+  const database = await getDb();
+  const stmt = database.prepare(`
+    SELECT * FROM emergency_contacts
+    WHERE email_verification_token = ? AND is_active = 1
+  `);
+  stmt.bind([token]);
+
+  if (!stmt.step()) {
+    stmt.free();
+    return null;
+  }
+
+  const row = stmt.getAsObject();
+  stmt.free();
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    email: row.email,
+    emailVerified: !!row.email_verified,
+    emailVerificationSentAt: row.email_verification_sent_at
+  };
+};
+
+// Set email verification token for a contact
+export const setEmailVerificationToken = async (contactId, token) => {
+  const database = await getDb();
+  database.run(
+    `UPDATE emergency_contacts SET 
+      email_verification_token = ?, 
+      email_verification_sent_at = datetime('now'),
+      updated_at = datetime('now')
+    WHERE id = ?`,
+    [token, contactId]
+  );
+  saveDb();
+};
+
+// Mark email as verified
+export const markEmailVerified = async (contactId) => {
+  const database = await getDb();
+  database.run(
+    `UPDATE emergency_contacts SET 
+      email_verified = 1, 
+      email_verification_token = NULL,
+      updated_at = datetime('now')
+    WHERE id = ?`,
+    [contactId]
+  );
+  saveDb();
 };
 
 // Create a new emergency contact
