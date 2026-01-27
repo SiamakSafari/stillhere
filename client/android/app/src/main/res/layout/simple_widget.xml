@@ -5,22 +5,68 @@
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
-    android:background="#222222"
+    android:background="#1a1a2e"
     android:padding="12dp">
     
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Status row -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="✓"
-        android:textSize="32sp"
-        android:textColor="#4ADE80" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        
+        <View
+            android:id="@+id/statusDot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:background="@drawable/status_indicator_circle" />
+        
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="Tap to Check In"
+            android:textSize="11sp"
+            android:textColor="#F97316" />
+    </LinearLayout>
     
-    <TextView
+    <!-- Streak display -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Check In"
-        android:textSize="14sp"
-        android:textColor="#FFFFFF"
-        android:layout_marginTop="4dp" />
+        android:orientation="horizontal"
+        android:gravity="bottom"
+        android:layout_marginTop="8dp">
+        
+        <TextView
+            android:id="@+id/streakCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textSize="44sp"
+            android:textStyle="bold"
+            android:textColor="#F97316" />
+        
+        <TextView
+            android:id="@+id/streakLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginBottom="8dp"
+            android:text="days"
+            android:textSize="12sp"
+            android:textColor="#9CA3AF" />
+    </LinearLayout>
+    
+    <!-- Tap hint -->
+    <TextView
+        android:id="@+id/tapHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="👆 One tap check-in"
+        android:textSize="10sp"
+        android:textColor="#F97316" />
         
 </LinearLayout>
