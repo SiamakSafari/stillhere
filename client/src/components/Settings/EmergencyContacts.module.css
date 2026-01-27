@@ -127,6 +127,47 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+.iconButton.testButton {
+  color: var(--accent-primary, var(--green-primary));
+}
+
+.iconButton.testButton:hover {
+  color: var(--white);
+  background: var(--accent-primary, var(--green-primary));
+  border-color: var(--accent-primary, var(--green-primary));
+}
+
+.iconButton.testButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.testResultSuccess {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid var(--accent-primary, var(--green-primary));
+  border-radius: var(--radius-md);
+  color: var(--accent-primary, var(--green-primary));
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.testResultError {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--red-error);
+  border-radius: var(--radius-md);
+  color: var(--red-error);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-md);
+}
+
 .smallSpinner {
   width: 14px;
   height: 14px;

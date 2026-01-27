@@ -120,6 +120,21 @@ export const Step2Contact = ({ data, onNext, onBack, onUpdate }) => {
           <Button type="submit" fullWidth size="large">
             Continue
           </Button>
+          
+          <button
+            type="button"
+            className={styles.skipLink}
+            onClick={() => {
+              onUpdate({
+                contactName: '',
+                contactEmail: '',
+                contactPhone: null
+              });
+              onNext();
+            }}
+          >
+            I'll add this later in settings
+          </button>
         </form>
       </div>
     </div>

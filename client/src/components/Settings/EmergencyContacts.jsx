@@ -10,6 +10,7 @@ export const EmergencyContacts = ({ data }) => {
   const [contacts, setContacts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [testResult, setTestResult] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newContact, setNewContact] = useState({
     name: '',
@@ -18,6 +19,12 @@ export const EmergencyContacts = ({ data }) => {
     alertPreference: 'email'
   });
   const [isAdding, setIsAdding] = useState(false);
+
+  const handleTestResult = (result) => {
+    setTestResult(result);
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => setTestResult(null), 5000);
+  };
 
   useEffect(() => {
     if (data.userId) {
@@ -135,6 +142,24 @@ export const EmergencyContacts = ({ data }) => {
         </div>
       )}
 
+      {testResult && (
+        <div className={testResult.success ? styles.testResultSuccess : styles.testResultError}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {testResult.success ? (
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3" />
+            ) : (
+              <>
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
+              </>
+            )}
+          </svg>
+          {testResult.success 
+            ? `Test alert sent to ${testResult.contactName}! Check their inbox/phone.`
+            : `Failed to send test alert: ${testResult.error || 'Unknown error'}`}
+        </div>
+      )}
+
       {/* Contact list */}
       <div className={styles.contactList}>
         {contacts.map((contact, index) => (
@@ -142,8 +167,10 @@ export const EmergencyContacts = ({ data }) => {
             key={contact.id}
             contact={contact}
             index={index + 1}
+            userId={data.userId}
             onUpdate={(updates) => handleUpdateContact(contact.id, updates)}
             onDelete={() => handleDeleteContact(contact.id)}
+            onTestResult={handleTestResult}
           />
         ))}
       </div>

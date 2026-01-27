@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { OnboardingProgress } from './OnboardingProgress';
 import { Step1Name } from './Step1Name';
 import { Step2Contact } from './Step2Contact';
+import { Step3Window } from './Step3Window';
 import { Step3Pet } from './Step3Pet';
 import { api } from '../../utils/api';
 import { trackOnboardingCompleted, setUserContext } from '../../utils/analytics';
@@ -41,7 +42,10 @@ export const Onboarding = ({ data, updateData, onComplete }) => {
           contactName: data.contactName,
           contactEmail: data.contactEmail,
           petName: data.petName,
-          petNotes: data.petNotes
+          petNotes: data.petNotes,
+          checkInWindowStart: data.checkInWindowStart,
+          checkInWindowEnd: data.checkInWindowEnd,
+          timezone: data.timezone
         });
       } catch (error) {
         console.error('Failed to register with server:', error);
@@ -77,6 +81,15 @@ export const Onboarding = ({ data, updateData, onComplete }) => {
         );
       case 2:
         return (
+          <Step3Window
+            data={data}
+            onNext={handleNext}
+            onBack={handleBack}
+            onUpdate={updateData}
+          />
+        );
+      case 3:
+        return (
           <Step3Pet
             data={data}
             onComplete={handleComplete}
@@ -91,7 +104,7 @@ export const Onboarding = ({ data, updateData, onComplete }) => {
 
   return (
     <div className={styles.container}>
-      <OnboardingProgress currentStep={step} totalSteps={3} />
+      <OnboardingProgress currentStep={step} totalSteps={4} />
       {renderStep()}
     </div>
   );

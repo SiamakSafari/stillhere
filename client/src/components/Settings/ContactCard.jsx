@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '../common/Button';
+import { api } from '../../utils/api';
 import styles from './EmergencyContacts.module.css';
 
 const ALERT_OPTIONS = [
@@ -8,10 +9,11 @@ const ALERT_OPTIONS = [
   { value: 'both', label: 'Email & SMS' }
 ];
 
-export const ContactCard = ({ contact, index, onUpdate, onDelete }) => {
+export const ContactCard = ({ contact, index, onUpdate, onDelete, userId, onTestResult }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [editData, setEditData] = useState({
     name: contact.name,
     email: contact.email || '',
@@ -41,6 +43,21 @@ export const ContactCard = ({ contact, index, onUpdate, onDelete }) => {
   const handleDelete = async () => {
     setIsDeleting(true);
     await onDelete();
+  };
+
+  const handleTestAlert = async () => {
+    if (!userId) return;
+    
+    setIsTesting(true);
+    try {
+      await api.testAlert(userId, contact.id);
+      onTestResult?.({ success: true, contactName: contact.name });
+    } catch (error) {
+      console.error('Failed to send test alert:', error);
+      onTestResult?.({ success: false, error: error.message, contactName: contact.name });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const alertLabel = ALERT_OPTIONS.find(o => o.value === contact.alertPreference)?.label || 'Email only';
@@ -115,6 +132,20 @@ export const ContactCard = ({ contact, index, onUpdate, onDelete }) => {
       <div className={styles.contactCardHeader}>
         <span className={styles.contactNumber}>#{index}</span>
         <div className={styles.contactActions}>
+          <button
+            className={`${styles.iconButton} ${styles.testButton}`}
+            onClick={handleTestAlert}
+            disabled={isTesting}
+            title="Send test alert"
+          >
+            {isTesting ? (
+              <div className={styles.smallSpinner} />
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0" />
+              </svg>
+            )}
+          </button>
           <button
             className={styles.iconButton}
             onClick={() => setIsEditing(true)}

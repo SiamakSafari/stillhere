@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { createUser, getUser, updateUser } from '../db/database.js';
-import { sendAlert } from '../services/email.js';
+import { createUser, getUser, updateUser, getEmergencyContacts, getEmergencyContact } from '../db/database.js';
+import { sendAlert, sendAlertToContact } from '../services/email.js';
+import { sendAlertSMSToContact } from '../services/sms.js';
 import { authenticate, authorizeUser } from '../middleware/auth.js';
 import { validateUser, validateUUIDParam, validateSnooze } from '../middleware/validate.js';
-import { success, created, notFound, conflict, serverError } from '../utils/response.js';
+import { success, created, notFound, conflict, serverError, badRequest } from '../utils/response.js';
 
 const router = Router();
 
@@ -83,7 +84,7 @@ router.put('/:id',
   }
 );
 
-// Send test alert
+// Send test alert - optionally to a specific contact
 router.post('/:id/test-alert',
   validateUUIDParam('id'),
   authenticate,
@@ -91,17 +92,82 @@ router.post('/:id/test-alert',
   async (req, res) => {
     try {
       const user = await getUser(req.params.id);
+      const { contactId } = req.body;
 
       if (!user) {
         return notFound(res, 'User not found');
       }
 
-      const result = await sendAlert(user, true);
+      // If contactId specified, test that specific contact
+      if (contactId) {
+        const contact = await getEmergencyContact(contactId, req.params.id);
+        if (!contact) {
+          return notFound(res, 'Contact not found');
+        }
 
-      if (result.success) {
-        return success(res, { message: 'Test email sent successfully' });
+        const results = { email: null, sms: null };
+        
+        // Send based on contact's alert preference
+        if (contact.alertPreference === 'email' || contact.alertPreference === 'both') {
+          if (contact.email) {
+            results.email = await sendAlertToContact(user, contact, true);
+          }
+        }
+        
+        if (contact.alertPreference === 'sms' || contact.alertPreference === 'both') {
+          if (contact.phone) {
+            results.sms = await sendAlertSMSToContact(user, contact, { isTest: true });
+          }
+        }
+
+        const anySuccess = results.email?.success || results.sms?.success;
+        if (anySuccess) {
+          return success(res, { 
+            message: `Test alert sent to ${contact.name}`,
+            results
+          });
+        } else {
+          return serverError(res, 'Failed to send test alert');
+        }
+      }
+
+      // No contactId - send to all contacts (legacy behavior)
+      const contacts = await getEmergencyContacts(req.params.id);
+      
+      if (contacts.length === 0) {
+        // Fallback to legacy contactEmail field
+        if (user.contactEmail) {
+          const result = await sendAlert(user, true);
+          if (result.success) {
+            return success(res, { message: 'Test alert sent successfully' });
+          } else {
+            return serverError(res, result.error || 'Failed to send test alert');
+          }
+        }
+        return badRequest(res, 'No emergency contacts configured');
+      }
+
+      // Send to all contacts
+      const results = await Promise.all(
+        contacts.map(async (contact) => {
+          const r = { contact: contact.name, email: null, sms: null };
+          
+          if ((contact.alertPreference === 'email' || contact.alertPreference === 'both') && contact.email) {
+            r.email = await sendAlertToContact(user, contact, true);
+          }
+          if ((contact.alertPreference === 'sms' || contact.alertPreference === 'both') && contact.phone) {
+            r.sms = await sendAlertSMSToContact(user, contact, { isTest: true });
+          }
+          
+          return r;
+        })
+      );
+
+      const anySuccess = results.some(r => r.email?.success || r.sms?.success);
+      if (anySuccess) {
+        return success(res, { message: 'Test alerts sent', results });
       } else {
-        return serverError(res, result.error || 'Failed to send test email');
+        return serverError(res, 'Failed to send test alerts');
       }
     } catch (err) {
       console.error('Error sending test alert:', err);

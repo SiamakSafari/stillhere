@@ -9,6 +9,7 @@ import { ToastContainer } from './components/common/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { syncToServer } from './utils/api';
 import { syncWidget } from './plugins/WidgetBridge';
+import { initializeNotifications, scheduleDailyReminders, scheduleStreakWarning } from './services/notifications';
 
 // Parse current route from URL
 const parseRoute = () => {
@@ -145,6 +146,43 @@ function App() {
       listener.then(l => l.remove());
     };
   }, [data.onboardingComplete, data.streak, data.lastCheckIn, data.vacationUntil]);
+
+  // Initialize notifications after onboarding
+  useEffect(() => {
+    if (!data.onboardingComplete) return;
+
+    // Initialize push and local notifications
+    initializeNotifications({
+      checkInWindowEnd: data.checkInWindowEnd,
+      timezone: data.timezone,
+      streak: data.streak,
+      lastCheckIn: data.lastCheckIn
+    });
+  }, [data.onboardingComplete]);
+
+  // Update notification reminders when settings change
+  useEffect(() => {
+    if (!data.onboardingComplete) return;
+
+    // Reschedule daily reminders when window changes
+    if (data.checkInWindowEnd) {
+      scheduleDailyReminders({
+        checkInWindowEnd: data.checkInWindowEnd,
+        timezone: data.timezone,
+        streak: data.streak
+      });
+    }
+  }, [data.checkInWindowEnd, data.timezone, data.streak]);
+
+  // Schedule streak warning when streak/lastCheckIn changes
+  useEffect(() => {
+    if (!data.onboardingComplete || !data.streak || !data.lastCheckIn) return;
+
+    scheduleStreakWarning({
+      streak: data.streak,
+      lastCheckIn: data.lastCheckIn
+    });
+  }, [data.streak, data.lastCheckIn]);
 
   // Handle completing onboarding
   const handleOnboardingComplete = () => {

@@ -190,10 +190,11 @@ export const api = {
     return handleResponse(response);
   },
 
-  // Test alert (updated endpoint)
-  testAlert: async (userId) => {
+  // Test alert - optionally target a specific contact
+  testAlert: async (userId, contactId = null) => {
     const response = await fetchWithRetry(`${API_BASE}/users/${userId}/test-alert`, {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify({ contactId })
     });
     return handleResponse(response);
   },
