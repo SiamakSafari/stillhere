@@ -1,9 +1,10 @@
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 
-// RevenueCat API keys - replace with your actual keys from RevenueCat dashboard
-const REVENUECAT_IOS_KEY = 'your_ios_api_key';
-const REVENUECAT_ANDROID_KEY = 'your_android_api_key';
+// RevenueCat API keys - set via environment variables
+// Create these in RevenueCat dashboard → Project Settings → API Keys
+const REVENUECAT_IOS_KEY = import.meta.env.VITE_REVENUECAT_IOS_KEY || '';
+const REVENUECAT_ANDROID_KEY = import.meta.env.VITE_REVENUECAT_ANDROID_KEY || '';
 
 // Product identifiers - must match what you create in App Store Connect / Google Play
 export const PRODUCT_IDS = {
@@ -26,13 +27,18 @@ export const initializePurchases = async (userId = null) => {
     return false;
   }
 
+  const apiKey = Capacitor.getPlatform() === 'ios' 
+    ? REVENUECAT_IOS_KEY 
+    : REVENUECAT_ANDROID_KEY;
+
+  if (!apiKey) {
+    console.error('[Purchases] RevenueCat API key not configured! Set VITE_REVENUECAT_IOS_KEY or VITE_REVENUECAT_ANDROID_KEY');
+    return false;
+  }
+
   try {
     // Set log level for debugging (change to LOG_LEVEL.ERROR for production)
     await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
-
-    const apiKey = Capacitor.getPlatform() === 'ios' 
-      ? REVENUECAT_IOS_KEY 
-      : REVENUECAT_ANDROID_KEY;
 
     // Configure RevenueCat
     await Purchases.configure({
