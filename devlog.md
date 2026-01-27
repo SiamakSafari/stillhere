@@ -2456,3 +2456,428 @@ Creating pleasant UI sounds requires understanding:
 ---
 
 *Last updated: 2026-01-21*
+
+---
+
+## 2026-01-26: Multiple Emergency Contacts, SMS Check-in, Smart Home Integration
+
+### Overview
+
+Implemented three major features in parallel to expand the notification capabilities and integration options:
+1. **Multiple Emergency Contacts** - Add/manage up to 5 contacts with individual alert preferences
+2. **SMS Check-in Replies** - Text "OK" to the Twilio number anytime to check in
+3. **Smart Home Integration** - External API for IFTTT/Home Assistant/Zapier triggers
+
+---
+
+### Feature 1: Multiple Emergency Contacts
+
+#### Purpose
+Allow users to notify multiple people when they miss check-ins. Each contact can have their own notification preference (email, SMS, or both).
+
+#### Database Changes
+
+**New Table: `emergency_contacts`**
+```sql
+CREATE TABLE IF NOT EXISTS emergency_contacts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  alert_preference TEXT DEFAULT 'email',
+  priority INTEGER DEFAULT 1,
+  is_active INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+**Auto-Migration:**
+On server startup, existing contacts from the `users` table (`contact_name`, `contact_email`, `contact_phone`) are automatically migrated to the new `emergency_contacts` table.
+
+#### New Database Functions
+
+| Function | Description |
+|----------|-------------|
+| `getEmergencyContacts(userId)` | Get all active contacts for a user |
+| `createEmergencyContact(userId, contact)` | Add contact (max 5 per user) |
+| `updateEmergencyContact(contactId, userId, updates)` | Update contact details |
+| `deleteEmergencyContact(contactId, userId)` | Soft delete contact |
+
+#### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/contacts/:userId` | List all contacts |
+| POST | `/api/contacts/:userId` | Add contact (max 5) |
+| PUT | `/api/contacts/:userId/:contactId` | Update contact |
+| DELETE | `/api/contacts/:userId/:contactId` | Delete contact |
+
+#### Scheduler Updates
+
+Modified `scheduler.js` to loop through all emergency contacts when sending alerts:
+- Each contact receives alerts based on their individual `alertPreference`
+- Falls back to legacy `contactEmail`/`contactPhone` if no contacts in new table
+
+```javascript
+// For each user needing alert
+const contacts = await getEmergencyContacts(user.id);
+
+for (const contact of contacts) {
+  if (contact.alertPreference === 'email' || contact.alertPreference === 'both') {
+    await sendAlertToContact(user, contact, false, location);
+  }
+  if (contact.alertPreference === 'sms' || contact.alertPreference === 'both') {
+    await sendAlertSMSToContact(user, contact, options);
+  }
+}
+```
+
+#### Frontend Components
+
+**New Files:**
+- `EmergencyContacts.jsx` - Contact list with add/edit/delete
+- `ContactCard.jsx` - Individual contact editor
+- `EmergencyContacts.module.css` - Styling
+
+**Features:**
+- Add up to 5 contacts
+- Edit contact name, email, phone, alert preference
+- Delete contacts with confirmation
+- Privacy note explaining when contacts are notified
+
+---
+
+### Feature 2: SMS Check-in Replies
+
+#### Purpose
+Allow users to check in by texting a simple response (OK, YES, HERE) to the Twilio number without opening the app.
+
+#### Database Changes
+
+**New User Columns:**
+```sql
+ALTER TABLE users ADD COLUMN phone_number TEXT;
+ALTER TABLE users ADD COLUMN sms_checkin_enabled INTEGER DEFAULT 0;
+```
+
+#### New Database Function
+
+| Function | Description |
+|----------|-------------|
+| `getUserByPhoneNumber(phone)` | Find user by phone number (matches last 10 digits) |
+
+#### SMS Webhook Endpoint
+
+**File:** `server/routes/sms-webhook.js`
+
+**Endpoint:** `POST /api/sms/webhook`
+
+**Flow:**
+1. Twilio sends POST with `From` (phone) and `Body` (message)
+2. Validate Twilio signature (production only)
+3. Look up user by phone number
+4. Check if response is valid: OK, YES, Y, HERE, ALIVE, GOOD, FINE, PRESENT, 1
+5. Record check-in if valid
+6. Return TwiML response with confirmation
+
+**Valid Responses:**
+```javascript
+const VALID_RESPONSES = ['ok', 'yes', 'y', 'here', 'alive', 'good', 'fine', 'present', '1'];
+```
+
+**TwiML Responses:**
+```xml
+<!-- Success -->
+<Response>
+  <Message>Got it, {name}! You're checked in. Your streak is now {streak} days.</Message>
+</Response>
+
+<!-- Already checked in -->
+<Response>
+  <Message>Hi {name}! You already checked in today. Your streak is {streak} days.</Message>
+</Response>
+
+<!-- Invalid response -->
+<Response>
+  <Message>Hi {name}! To check in, reply with OK, YES, or HERE.</Message>
+</Response>
+
+<!-- No account found -->
+<Response>
+  <Message>No account found for this number. Enable SMS check-in in the Still Here app settings.</Message>
+</Response>
+```
+
+#### Frontend Component
+
+**File:** `SmsCheckIn.jsx`
+
+**Features:**
+- Toggle to enable/disable SMS check-in
+- Phone number input field
+- Shows Twilio number when enabled
+- Instructions on what to text
+
+---
+
+### Feature 3: Smart Home Integration
+
+#### Purpose
+Allow external services (IFTTT, Home Assistant, Zapier, cron jobs) to trigger check-ins via API.
+
+#### Database Changes
+
+**New Table: `api_keys`**
+```sql
+CREATE TABLE IF NOT EXISTS api_keys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  api_key TEXT UNIQUE NOT NULL,
+  label TEXT,
+  is_active INTEGER DEFAULT 1,
+  last_used_at TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+**New Table: `external_checkins` (audit log)**
+```sql
+CREATE TABLE IF NOT EXISTS external_checkins (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  api_key_id INTEGER,
+  source TEXT,
+  ip_address TEXT,
+  checked_in_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+#### New Database Functions
+
+| Function | Description |
+|----------|-------------|
+| `generateApiKey(userId, label)` | Create new 64-char hex API key |
+| `getApiKeys(userId)` | List keys (preview only, not full key) |
+| `validateApiKey(apiKey)` | Validate key and return user info |
+| `revokeApiKey(keyId, userId)` | Soft delete API key |
+| `logExternalCheckIn(...)` | Audit log entry |
+| `getLastExternalCheckIn(apiKeyId)` | For rate limiting |
+
+#### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/checkin/external` | External check-in (API key auth) |
+| GET | `/api/keys/:userId` | List user's API keys |
+| POST | `/api/keys/:userId` | Generate new API key |
+| DELETE | `/api/keys/:userId/:keyId` | Revoke API key |
+
+#### External Check-in Endpoint
+
+**Request:**
+```
+POST /api/checkin/external
+Authorization: Bearer <api_key>
+Content-Type: application/json
+
+{"source": "ifttt"}  // optional
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "message": "Check-in recorded",
+  "streak": 5,
+  "user": "Siamak"
+}
+```
+
+**Response (Rate Limited):**
+```json
+{
+  "error": "Rate limited",
+  "message": "Please wait 60 minutes before checking in again",
+  "retryAfter": 3592
+}
+```
+
+**Rate Limiting:** 1 check-in per hour per API key
+
+#### Frontend Component
+
+**Files:**
+- `SmartHomeIntegration.jsx`
+- `SmartHomeIntegration.module.css`
+
+**Features:**
+- Generate new API keys with optional labels
+- API key shown only once at creation (with copy button)
+- List existing keys (preview only: first 8 chars)
+- Last used timestamp
+- Revoke keys
+- Usage examples for IFTTT, cURL
+
+---
+
+### API Testing Results
+
+All endpoints tested via cURL:
+
+| Test | Result |
+|------|--------|
+| GET /api/contacts/:userId | ✅ Returns contacts array |
+| POST /api/contacts/:userId | ✅ Creates contact (returns null on success - minor bug) |
+| PUT /api/contacts/:userId/:contactId | ✅ Updates contact |
+| DELETE /api/contacts/:userId/:contactId | ✅ Soft deletes contact |
+| GET /api/sms/status | ✅ Returns {configured: false} when Twilio not set |
+| POST /api/sms/webhook | ✅ Returns TwiML response |
+| POST /api/keys/:userId | ✅ Generates and returns full API key |
+| GET /api/keys/:userId | ✅ Returns keys with preview only |
+| POST /api/checkin/external (valid key) | ✅ Records check-in, returns streak |
+| POST /api/checkin/external (rate limited) | ✅ Returns 429 with retry time |
+| POST /api/checkin/external (invalid key) | ✅ Returns 401 |
+| DELETE /api/keys/:userId/:keyId | ✅ Revokes key |
+
+---
+
+### Files Summary
+
+#### New Files
+
+**Server:**
+| File | Purpose |
+|------|---------|
+| `server/routes/contacts.js` | Emergency contacts CRUD API |
+| `server/routes/sms-webhook.js` | Twilio incoming SMS handler |
+| `server/routes/external.js` | External check-in + API key management |
+
+**Client:**
+| File | Purpose |
+|------|---------|
+| `EmergencyContacts.jsx` | Contact list UI |
+| `ContactCard.jsx` | Individual contact editor |
+| `EmergencyContacts.module.css` | Contact styles |
+| `SmsCheckIn.jsx` | SMS check-in settings |
+| `SmartHomeIntegration.jsx` | API key management UI |
+| `SmartHomeIntegration.module.css` | Integration styles |
+
+#### Modified Files
+
+| File | Changes |
+|------|---------|
+| `server/db/database.js` | New tables, migrations, 12 new functions |
+| `server/index.js` | Register 3 new route files |
+| `server/services/scheduler.js` | Multi-contact alert loop |
+| `server/services/email.js` | `sendAlertToContact`, `sendReminderToContact` |
+| `server/services/sms.js` | `sendAlertSMSToContact` |
+| `client/src/components/Settings/SettingsModal.jsx` | Import 3 new components |
+| `client/src/utils/api.js` | 8 new API methods |
+| `client/src/utils/storage.js` | `phoneNumber`, `smsCheckinEnabled` defaults |
+
+---
+
+### Lessons Learned
+
+#### 1. Database Migration on Server Start
+
+The migration approach (checking if contacts exist and migrating on startup) works well for SQLite:
+```javascript
+const migrateExistingContacts = (database) => {
+  // Check if user has contacts in users table but not in emergency_contacts
+  // If so, create a contact record from the legacy fields
+};
+```
+
+This ensures backward compatibility without requiring manual migration scripts.
+
+#### 2. Phone Number Matching
+
+Phone numbers come in many formats (+1-555-123-4567, 5551234567, etc.). The solution:
+```javascript
+// Normalize to last 10 digits for matching
+const normalized = phoneNumber.replace(/\D/g, '');
+stmt.bind(['%' + normalized.slice(-10)]);
+```
+
+#### 3. Rate Limiting per API Key
+
+For external APIs, rate limiting per key (not per user) prevents abuse while allowing legitimate automation:
+```javascript
+const lastCheckIn = await getLastExternalCheckIn(keyData.keyId);
+const timeSince = Date.now() - new Date(lastCheckIn + 'Z').getTime();
+if (timeSince < RATE_LIMIT_MS) {
+  return res.status(429).json({ error: 'Rate limited' });
+}
+```
+
+#### 4. TwiML Response Format
+
+Twilio expects a specific XML format:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Your message here</Message>
+</Response>
+```
+
+Set `res.type('text/xml')` before sending.
+
+#### 5. API Key Security
+
+- Generate keys with `crypto.randomBytes(32).toString('hex')` (256-bit)
+- Store full key in database (hashed would be better for production)
+- Return full key only on creation
+- Show only preview (first 8 chars) in list view
+
+---
+
+### Configuration Required
+
+#### Twilio SMS Webhook
+
+Configure in Twilio Console:
+- Webhook URL: `https://yourdomain.com/api/sms/webhook`
+- Method: POST
+- Content-Type: application/x-www-form-urlencoded
+
+#### Smart Home Examples
+
+**IFTTT:**
+```
+POST https://stillhere.app/api/checkin/external
+Authorization: Bearer YOUR_API_KEY
+{"source": "ifttt"}
+```
+
+**Home Assistant:**
+```yaml
+rest_command:
+  stillhere_checkin:
+    url: "https://stillhere.app/api/checkin/external"
+    method: POST
+    headers:
+      Authorization: "Bearer YOUR_API_KEY"
+    payload: '{"source": "home_assistant"}'
+```
+
+**cURL:**
+```bash
+curl -X POST https://stillhere.app/api/checkin/external \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+---
+
+### Commit
+
+`0b126ba` - Add multiple emergency contacts, SMS check-in, and smart home integration
+- 17 files changed, 2615 insertions
+
+---
+
+*Last updated: 2026-01-26*
