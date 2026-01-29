@@ -7,93 +7,133 @@ Still Here
 Daily safety check-in
 
 ## Short Description (80 characters)
-Daily safety check-in. Miss 48 hours? Your emergency contacts are notified.
+One tap daily confirms you're okay. Miss 48 hours? Your contact is notified.
 
 ## Full Description (4000 characters)
-Still Here is a simple daily check-in app for people who live alone.
+Still Here is the simplest safety app for people who live alone.
+
+**$4.99/month. 75% less than competitors.**
+
+Premium safety apps charge $20-50/month for clunky, outdated interfaces. Still Here gives you modern design and all the features you need at a fraction of the price.
+
+━━━━━━━━━━━━━━━━━━━━
 
 HOW IT WORKS
+
 • Tap once a day to confirm you're okay
-• If you don't check in for 48 hours, your emergency contacts are notified
-• Simple, reliable, and designed for peace of mind
+• Miss 48 hours? Your emergency contact is notified
+• That's it. No complicated features. No hardware.
+
+━━━━━━━━━━━━━━━━━━━━
+
+WHY STILL HERE?
+
+✓ AFFORDABLE — Just $4.99/month. Premium competitors charge $20+/month for less.
+
+✓ 48-HOUR WINDOW — Life gets busy. We give you breathing room, not strict daily deadlines.
+
+✓ PRIVACY FIRST — Your data stays on your device. No tracking, no location, no selling your info.
+
+✓ WORKS OFFLINE — Check in even without internet. Syncs when you're back online.
+
+✓ PET INFO — Include your pet details so they're cared for if something happens.
+
+━━━━━━━━━━━━━━━━━━━━
 
 PERFECT FOR
+
 • People who live alone
-• Remote workers and digital nomads
-• Solo travelers and adventurers
+• Remote workers
+• Solo travelers  
+• Seniors who value independence
 • Anyone whose loved ones worry about them
 
+━━━━━━━━━━━━━━━━━━━━
+
 FEATURES
-• One-tap daily check-in (or use the home screen widget!)
-• Up to 5 emergency contacts with email & SMS alerts
-• Activity mode for runs, hikes, dates, or meetings
-• Vacation mode when you're away
-• Mood tracking and wellness trends
+
+• One-tap daily check-in
+• Smart reminders (24h and 48h)
+• Activity mode — going hiking? Set a timed check-in
+• Vacation mode — pause alerts when traveling
+• Mood tracking (optional)
 • Check-in history and streaks
-• Family dashboard for loved ones to check your status
-• Works offline
+• Family dashboard — loved ones can see you're okay
 
-PRIVACY FIRST
-• Your data stays on your device
-• Minimal data stored on servers (just what's needed for alerts)
-• No tracking, no ads, no selling your data
+━━━━━━━━━━━━━━━━━━━━
 
-SUBSCRIPTION
-Still Here costs $4.99/month or $39.99/year (save 33%). 
+COMPARE US
 
-Why paid? Because your safety matters. No ads, no data selling, no compromises. Just a reliable service that works when you need it.
+Snug Premium: $19.99/month — clunky interface, feels dated
+Circle Alert: $10+/month — clinical design, feels like medical equipment  
+Life Alert: $50+/month — requires hardware, "elderly" stigma
 
-## Keywords
-safety, check-in, emergency, alone, daily, wellness, peace of mind, living alone, safety net, alert, notification
+Still Here: $4.99/month — modern design, all features, no hardware.
+
+━━━━━━━━━━━━━━━━━━━━
+
+36 million Americans live alone. Most share the same quiet fear: "What if something happens and no one notices for days?"
+
+Still Here exists so you never have to wonder.
+
+One tap. One contact. Peace of mind.
+
+## Keywords (100 characters)
+safety, check-in, emergency, alone, living alone, daily, wellness, solo, alert, seniors, peace of mind
 
 ## Category
 Primary: Health & Fitness
 Secondary: Lifestyle
+
+## Price
+$4.99/month (subscription)
 
 ## Age Rating
 4+ (No objectionable content)
 
 ---
 
-## Screenshot Requirements
+## Screenshot Captions
 
-### iPhone Screenshots (5 required)
-Sizes needed:
-- 6.7" (iPhone 14 Pro Max): 1290 x 2796 px
-- 6.5" (iPhone 11 Pro Max): 1242 x 2688 px
+**Screenshot 1 (Hero)**
+One tap. That's it.
+Daily peace of mind for $4.99/month
 
-Screenshots to capture:
-1. Main check-in screen (showing "Check In" button prominently)
-2. Check-in success with mood selector
-3. Activity mode timer running
-4. Weekly summary / mood trends chart
-5. Settings screen showing key features
+**Screenshot 2 (Check-in)**
+Check in with a single tap
+No complicated setup
 
-### iPad Screenshots (5 required)
-Size needed:
-- 12.9" iPad Pro: 2048 x 2732 px
+**Screenshot 3 (48h Alert)**
+48 hours of silence?
+Your contact is notified
 
-### Android Screenshots
-Minimum: 1080 x 1920 px
-Recommended: Match actual device resolution
+**Screenshot 4 (Activity Mode)**
+Going hiking?
+Set a timed check-in
 
----
-
-## Promotional Graphics
-
-### App Store Feature Graphic
-- Size: 1024 x 500 px
-- Design: Green gradient background (#4ade80 to #22c55e) with app icon and tagline
-- Tagline: "Peace of mind, one tap at a time"
-
-### Promo Video (Optional)
-- Duration: 15-30 seconds
-- Content: Quick demo of check-in flow, activity mode, and alert explanation
-- No audio required (show captions)
+**Screenshot 5 (Privacy)**
+Your data stays on your device
+No tracking. No selling.
 
 ---
 
-## App Store Connect / Google Play Console Info
+## What's New (Version 1.0)
+• Launch release
+• One-tap daily check-in
+• 48-hour emergency notifications
+• Activity mode for timed check-ins
+• Vacation mode
+• Mood tracking
+• Works offline
+
+---
+
+## Promotional Text (170 characters)
+Modern safety for people who live alone. $4.99/month — 75% less than competitors. One tap daily, miss 48 hours and your contact is notified. Simple as it should be.
+
+---
+
+## App Store Connect Info
 
 ### Support URL
 https://stillhere.app/support
@@ -105,42 +145,24 @@ https://stillhere.app/privacy
 https://stillhere.app
 
 ### Copyright
-(c) 2024 Still Here
+© 2026 Still Here
 
 ### Contact Email
 support@stillhere.app
 
 ---
 
-## Localization Notes
-
-Primary language: English (US)
-Consider localizing for:
-- Spanish
-- French
-- German
-- Japanese
-- Portuguese (Brazil)
-
----
-
-## Version History Template
-
-### Version X.X.X
-**What's New:**
-- [Feature or fix description]
-- [Feature or fix description]
-
----
-
 ## Review Notes for App Store Submission
 
-Demo Account (if needed):
-- This app does not require an account to test
+**Demo Instructions:**
+- No account required to test
 - On first launch, enter any name and email during onboarding
-- The check-in functionality works immediately
+- Check-in functionality works immediately
 
-Special Instructions:
-- The app sends email notifications after 48 hours of no check-in
-- To test the alert flow without waiting, use the "Send Test Email" feature in Settings
-- Activity Mode timer can be tested with a 1-minute duration for quick verification
+**Testing the Alert Flow:**
+- Use "Send Test Email" in Settings to verify notifications
+- Activity Mode can be tested with 1-minute duration
+
+**In-App Purchase:**
+- $4.99/month subscription unlocks full app
+- No free trial — pay to validate
